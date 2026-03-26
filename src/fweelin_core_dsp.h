@@ -72,6 +72,7 @@ class AudioBuffers {
   // Get # of inputs/ouputs
   inline int GetNumInputs() { return numins; };
   inline int GetNumOutputs() { return numouts; };
+  void ShareInputsFrom(AudioBuffers *src);
 
   // Is input/output #n stereo?
   char IsStereoInput(int n);
@@ -102,6 +103,8 @@ class AudioBuffers {
     numouts;         // & outs
   sample_t **ins[2], // 2 lists of input sample buffers (mono/left and right)
     **outs[2];       // & 2 lists of output sample buffers (mono/left and right)
+  char owns_ins[2];
+  char owns_outs[2];
 };
 
 // Settings for each input coming into FreeWheeling

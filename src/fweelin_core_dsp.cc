@@ -159,6 +159,8 @@ AudioBuffers::AudioBuffers(Fweelin *app) : app(app) {
   ins[1] = new sample_t *[numins];
   outs[0] = new sample_t *[numouts];
   outs[1] = new sample_t *[numouts];
+  owns_ins[0] = owns_ins[1] = 1;
+  owns_outs[0] = owns_outs[1] = 1;
   memset(ins[0],0,sizeof(sample_t *) * numins);
   memset(ins[1],0,sizeof(sample_t *) * numins);
   memset(outs[0],0,sizeof(sample_t *) * numouts);
@@ -166,11 +168,28 @@ AudioBuffers::AudioBuffers(Fweelin *app) : app(app) {
 };
 
 AudioBuffers::~AudioBuffers() { 
-  delete[] ins[0];
-  delete[] ins[1];
-  delete[] outs[0];
-  delete[] outs[1];
+  if (owns_ins[0])
+    delete[] ins[0];
+  if (owns_ins[1])
+    delete[] ins[1];
+  if (owns_outs[0])
+    delete[] outs[0];
+  if (owns_outs[1])
+    delete[] outs[1];
 };
+
+void AudioBuffers::ShareInputsFrom(AudioBuffers *src) {
+  if (owns_ins[0]) {
+    delete[] ins[0];
+    owns_ins[0] = 0;
+  }
+  if (owns_ins[1]) {
+    delete[] ins[1];
+    owns_ins[1] = 0;
+  }
+  ins[0] = src->ins[0];
+  ins[1] = src->ins[1];
+}
 
 char AudioBuffers::IsStereoInput(int n) {
   return app->getCFG()->IsStereoInput(n);
@@ -863,6 +882,8 @@ RootProcessor::RootProcessor(Fweelin *app, InputSettings *iset) :
 
   // Pre needs a separate set because preprocess runs in a different thread
   preabtmp = new AudioBuffers(app); 
+  abtmp->ShareInputsFrom(app->getABUFS());
+  preabtmp->ShareInputsFrom(app->getABUFS());
   buf[0] = new sample_t[app->getBUFSZ()];
   // buf2[0] = new sample_t[app->getBUFSZ()];
   prebuf[0] = new sample_t[prelen];
@@ -1174,10 +1195,6 @@ void RootProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
   if (!pre) {
     // Setup our own audio route, routing output to our internal buffer
     // Then, child processors will use this buffer
-    memcpy(abtmp->ins[0],ab->ins[0],sizeof(sample_t *) * ab->numins);
-    memcpy(abtmp->ins[1],ab->ins[1],sizeof(sample_t *) * ab->numins);
-    memset(abtmp->outs[0],0,sizeof(sample_t *) * ab->numouts);
-    memset(abtmp->outs[1],0,sizeof(sample_t *) * ab->numouts);
     abtmp->outs[0][0] = buf[0];
     abtmp->outs[1][0] = buf[1];
     
@@ -1189,10 +1206,6 @@ void RootProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
     // Notice I use a different set of structs for AudioBuffer ptrs
     // This is so that a concurrently running preprocess and RT process
     // do not collide
-    memset(preabtmp->ins[0],0,sizeof(sample_t *) * ab->numins);
-    memset(preabtmp->ins[1],0,sizeof(sample_t *) * ab->numins);
-    memset(preabtmp->outs[0],0,sizeof(sample_t *) * ab->numouts);
-    memset(preabtmp->outs[1],0,sizeof(sample_t *) * ab->numouts);
     preabtmp->outs[0][0] = prebuf[0];
     preabtmp->outs[1][0] = prebuf[1];
     
@@ -1226,6 +1239,8 @@ void RootProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
     abtmp2->outs[1][0] = buf2[1]; */
 
     // Second global chain works in place on the current output, like a side-chain
+    sample_t *saved_in0 = abtmp->ins[0][0];
+    sample_t *saved_in1 = abtmp->ins[1][0];
     memcpy(buf[0],out[0],sizeof(sample_t)*len);
     if (out[1] != 0)
       memcpy(buf[1],out[1],sizeof(sample_t)*len);
@@ -1236,8 +1251,8 @@ void RootProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
     processchain(pre,len,abtmp,abtmp,ProcessorItem::TYPE_GLOBAL_SECOND_CHAIN,0); // No mixing back in
 
     // Restore inputs to come from system inputs, and go through all global children after volume xform and mix.
-    memcpy(abtmp->ins[0],ab->ins[0],sizeof(sample_t *) * ab->numins);
-    memcpy(abtmp->ins[1],ab->ins[1],sizeof(sample_t *) * ab->numins);
+    abtmp->ins[0][0] = saved_in0;
+    abtmp->ins[1][0] = saved_in1;
     processchain(pre,len,ab,abtmp,ProcessorItem::TYPE_GLOBAL,1);
 
     // Make a copy for the visual scope

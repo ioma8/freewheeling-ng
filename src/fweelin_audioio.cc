@@ -113,11 +113,12 @@ OSStatus AudioIO::process(void *arg,
                           UInt32 inNumberFrames,
                           AudioBufferList *ioData) {
   AudioIO *inst = static_cast<AudioIO *>(arg);
+  const unsigned int kCPULoadSamplePeriod = 16;
 
   register_audio_thread_if_needed(inst, pthread_self());
 
-  struct timeval start_tv, end_tv;
-  gettimeofday(&start_tv, 0);
+  if (inst->cpuload_sample_count == 0)
+    gettimeofday(&inst->cpuload_start_tv, 0);
 
   inst->app->getEMG()->WakeupIfNeeded();
   inst->app->getMMG()->WakeupIfNeeded();
@@ -128,35 +129,41 @@ OSStatus AudioIO::process(void *arg,
     memset(ioData->mBuffers[1].mData, 0, ioData->mBuffers[1].mDataByteSize);
 
   AudioBuffers *ab = inst->app->getABUFS();
-  memset(ab->ins[0], 0, sizeof(sample_t *) * ab->numins);
-  memset(ab->ins[1], 0, sizeof(sample_t *) * ab->numins);
-  memset(ab->outs[0], 0, sizeof(sample_t *) * ab->numouts);
-  memset(ab->outs[1], 0, sizeof(sample_t *) * ab->numouts);
   for (int i = 0; i < ab->numins_ext; i++) {
     inst->iport[0][i] = inst->capture[0];
     inst->iport[1][i] = (ab->IsStereoInput(i) ? inst->capture[1] : 0);
     ab->ins[0][i] = inst->iport[0][i];
     ab->ins[1][i] = inst->iport[1][i];
   }
-  for (int i = 0; i < ab->numouts; i++) {
-    inst->oport[0][i] = static_cast<sample_t *>(ioData->mBuffers[0].mData);
-    inst->oport[1][i] = (ioData->mNumberBuffers > 1 ?
-                         static_cast<sample_t *>(ioData->mBuffers[1].mData) :
-                         0);
-    ab->outs[0][i] = inst->oport[0][i];
-    ab->outs[1][i] = inst->oport[1][i];
+  if (ab->numins > ab->numins_ext) {
+#if USE_FLUIDSYNTH
+    ab->ins[0][ab->numins_ext] = 0;
+    ab->ins[1][ab->numins_ext] = 0;
+#endif
   }
+  inst->oport[0][0] = static_cast<sample_t *>(ioData->mBuffers[0].mData);
+  inst->oport[1][0] = (ioData->mNumberBuffers > 1 ?
+                       static_cast<sample_t *>(ioData->mBuffers[1].mData) :
+                       0);
+  ab->outs[0][0] = inst->oport[0][0];
+  ab->outs[1][0] = inst->oport[1][0];
 
-  inst->cpuload = 0.0f;
+  inst->cpuload_sample_frames += inNumberFrames;
   if (inst->rp != 0)
     inst->rp->process(0, inNumberFrames, ab);
 
-  gettimeofday(&end_tv, 0);
-  double elapsed = (double) (end_tv.tv_sec - start_tv.tv_sec) +
-                   (double) (end_tv.tv_usec - start_tv.tv_usec) / 1000000.0;
-  double period = (double) inNumberFrames / (double) inst->srate;
-  if (period > 0.0)
-    inst->cpuload = (float) (elapsed / period);
+  inst->cpuload_sample_count++;
+  if (inst->cpuload_sample_count >= kCPULoadSamplePeriod) {
+    struct timeval end_tv;
+    gettimeofday(&end_tv, 0);
+    double elapsed = (double) (end_tv.tv_sec - inst->cpuload_start_tv.tv_sec) +
+                     (double) (end_tv.tv_usec - inst->cpuload_start_tv.tv_usec) / 1000000.0;
+    double period = (double) inst->cpuload_sample_frames / (double) inst->srate;
+    if (period > 0.0)
+      inst->cpuload = (float) (elapsed / period);
+    inst->cpuload_sample_count = 0;
+    inst->cpuload_sample_frames = 0;
+  }
 
   inst->timebase_master = 1;
   inst->transport_roll = 0;

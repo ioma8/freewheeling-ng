@@ -24,6 +24,8 @@ extern "C" {
 #include <AudioUnit/AudioUnit.h>
 }
 
+#include <sys/time.h>
+
 typedef float sample_t;
 typedef UInt32 nframes_t;
 
@@ -61,7 +63,11 @@ class Processor;
 
 class AudioIO {
 public:
-  AudioIO(Fweelin *app) : sync_start_frame(0), timebase_master(0), sync_active(0), audio_thread(0), audio_thread_2(0), app(app) {};
+  AudioIO(Fweelin *app)
+    : sync_start_frame(0), timebase_master(0), sync_active(0),
+      audio_thread(0), audio_thread_2(0),
+      cpuload_sample_count(0), cpuload_sample_frames(0),
+      app(app) {}
 
   // Open up system level audio
   int open ();
@@ -178,6 +184,10 @@ public:
 
   volatile pthread_t audio_thread;  // RT audio thread
   volatile pthread_t audio_thread_2; // Optional second RT audio thread
+
+  unsigned int cpuload_sample_count;
+  nframes_t cpuload_sample_frames;
+  struct timeval cpuload_start_tv;
 
   // Pointer to the main app
   Fweelin *app;
