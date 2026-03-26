@@ -445,7 +445,7 @@ class UserVariable {
     switch (type) {
     case T_char  : return Range(      *((char  *) value),       *((char  *) value   ));
     case T_int   : return Range(      *((int   *) value),       *((int   *) value   ));
-    case T_long  : return Range(      *((long  *) value),       *((long  *) value   ));
+    case T_long  : return Range((int) *((long  *) value), (int) *((long  *) value));
     case T_float : return Range((int) *((float *) value), (int) *((float *) value   ));
     case T_range : return Range(      *((int   *) value),       *(((int  *) value)+1));
     case T_variable :
@@ -574,7 +574,7 @@ public:
       printf("CORE: ERROR: Too many writer threads for Ring Buffer!\n");
       exit(1);
     }
-    printf("CORE: Register ringbuffer writer thread: %lu\n",id);
+    printf("CORE: Register ringbuffer writer thread: %p\n",(void *) id);
     ids[num_rw_threads] = id;
     num_rw_threads++;
     pthread_mutex_unlock (&register_rw_lock);
@@ -590,7 +590,8 @@ public:
       printf("CORE: ERROR: Too many writer threads for Ring Buffer!\n");
       exit(1);
     }
-    printf("CORE: Register ringbuffer writer thread: %lu\n",pthread_self());
+    printf("CORE: Register ringbuffer writer thread: %p\n",
+           (void *) pthread_self());
     ids[num_rw_threads] = pthread_self();
     num_rw_threads++;
     pthread_mutex_unlock (&register_rw_lock);
@@ -711,7 +712,8 @@ public:
           return 0;
       }
       
-    printf("CORE: RingBuffer write from unregistered write thread: %lu!\n",id);
+    printf("CORE: RingBuffer write from unregistered write thread: %p!\n",
+           (void *) id);
     return -1;
   };
   

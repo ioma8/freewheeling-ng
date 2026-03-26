@@ -439,6 +439,7 @@
 		C01FCF4B08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
@@ -448,6 +449,7 @@
 					INSTALL_PATH = "$(HOME)/Applications";
 					PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.fweelin;
 					PRODUCT_NAME = fweelin;
+				USE_HEADERMAP = NO;
 				WRAPPER_EXTENSION = app;
 				ZERO_LINK = YES;
 			};
@@ -456,6 +458,7 @@
 		C01FCF4C08A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+					ALWAYS_SEARCH_USER_PATHS = NO;
 					ARCHS = arm64;
 					GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 					GCC_MODEL_TUNING = G5;
@@ -463,6 +466,7 @@
 					INSTALL_PATH = "$(HOME)/Applications";
 					PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.fweelin;
 					PRODUCT_NAME = fweelin;
+				USE_HEADERMAP = NO;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
@@ -470,6 +474,7 @@
 		C01FCF4F08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = arm64;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(FRAMEWORK_SEARCH_PATHS)",
@@ -479,6 +484,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)",
 					"$(PROJECT_DIR)/../src",
 					/opt/homebrew/include,
 					/opt/homebrew/include/SDL,
@@ -517,6 +523,7 @@
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = FreeWheeling;
+				USE_HEADERMAP = NO;
 				ZERO_LINK = NO;
 			};
 			name = Debug;
@@ -524,6 +531,7 @@
 		C01FCF5008A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = arm64;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(FRAMEWORK_SEARCH_PATHS)",
@@ -533,6 +541,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)",
 					"$(PROJECT_DIR)/../src",
 					/opt/homebrew/include,
 					/opt/homebrew/include/SDL,
@@ -571,6 +580,7 @@
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = FreeWheeling;
+				USE_HEADERMAP = NO;
 				ZERO_LINK = NO;
 			};
 			name = Release;

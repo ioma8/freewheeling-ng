@@ -77,7 +77,8 @@ public:
         return 0;
       }
 
-    printf("CORE: RT_RCU ReadLock from unregistered read thread: %lu!\n",id);
+    printf("CORE: RT_RCU ReadLock from unregistered read thread: %p!\n",
+           (void *) id);
     return -1;
   };
 
@@ -99,7 +100,8 @@ public:
         return 0;
       }
 
-    printf("CORE: RT_RCU ReadUnlock from unregistered read thread: %lu!\n",id);
+    printf("CORE: RT_RCU ReadUnlock from unregistered read thread: %p!\n",
+           (void *) id);
     return -1;
   };
   

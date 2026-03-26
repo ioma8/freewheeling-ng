@@ -415,7 +415,7 @@ Event *Event::GetEventByType(EventType typ, char wait) {
   }
 };
 
-Event *Event::GetEventByName(char *evtname, char wait) {
+Event *Event::GetEventByName(const char *evtname, char wait) {
   if (ett == 0) {
     printf("EVENT: Error- no event type table!\n");
     exit(1);

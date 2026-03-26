@@ -248,12 +248,12 @@ class EventParameter {
   // Specify an event parameter with given name, offset into event,
   // size of data type, and max index (-1 by default if parameter
   // is not indexed)
-  EventParameter (char *name = 0, long ofs = 0, 
+  EventParameter (const char *name = 0, long ofs = 0, 
                   CoreDataType dtype = T_char,
                   int max_index = -1) :
     name(name), ofs(ofs), dtype(dtype), max_index(max_index) {};
 
-  char *name; // Name of event parameter
+  const char *name; // Name of event parameter
   long ofs; // Offset into event class of data
   CoreDataType dtype; // Type of data
   int max_index; // Config stores a hashtable for input events for
@@ -264,12 +264,12 @@ class EventParameter {
 // Table of all event types and memory managers for them
 class EventTypeTable {
  public:
-  EventTypeTable (char *name = 0, PreallocatedType *mgr = 0,
+  EventTypeTable (const char *name = 0, PreallocatedType *mgr = 0,
                   Event *proto = 0, int paramidx = -1, char slowdelivery = 0) :
     name(name), pretype(mgr), proto(proto), paramidx(paramidx), 
     slowdelivery(slowdelivery) {};
 
-  char *name;
+  const char *name;
   PreallocatedType *pretype;
   Event *proto;
   int paramidx; // Index of event parameter that is used for hash index
@@ -311,14 +311,14 @@ class Event : public Preallocated {
   // Returns an instance of the event named 'evtname'
   // If wait is nonzero and there are no free instances through RTNew,
   // we wait until one becomes available
-  static Event *GetEventByName(char *evtname, char wait = 0); 
+  static Event *GetEventByName(const char *evtname, char wait = 0); 
   // Returns an instance of the event with given type
   static Event *GetEventByType(EventType typ, char wait = 0);
   // Returns the index of the indexed parameter for the event with given
   // type
   static int GetParamIdxByType(EventType typ) { return ett[typ].paramidx; };
   // Returns the string name of the given event type
-  static char *GetEventName(EventType typ) { return ett[typ].name; };
+  static const char *GetEventName(EventType typ) { return ett[typ].name; };
 
   static EventTypeTable *ett;
   static void SetupEventTypeTable(MemoryManager *mmgr);
@@ -340,6 +340,15 @@ class Event : public Preallocated {
   char echo;
 };
 
+#define EVT_PARAM_TABLE(num, ...) \
+  virtual int GetNumParams() { return num; }; \
+  virtual EventParameter GetParam(int n) { \
+    static const EventParameter params[] = { __VA_ARGS__ }; \
+    if (n < 0 || n >= (int) (sizeof(params) / sizeof(params[0]))) \
+      return EventParameter(); \
+    return params[n]; \
+  };
+
 // GoSub is really an event that encapsulates other events
 // It allows us to fire off a subroutine of events by triggering one GoSubEvent
 // The events that are fired off are defined by creating a binding to
@@ -358,21 +367,11 @@ class GoSubEvent : public Event {
     param2 = s.param2;
     param3 = s.param3;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("sub",FWEELIN_GETOFS(sub),T_int,SUBS_HASH);
-    case 1:
-      return EventParameter("param1",FWEELIN_GETOFS(param1),T_float);
-    case 2:
-      return EventParameter("param2",FWEELIN_GETOFS(param2),T_float);
-    case 3:
-      return EventParameter("param3",FWEELIN_GETOFS(param3),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(4,
+                  EventParameter("sub",FWEELIN_GETOFS(sub),T_int,SUBS_HASH),
+                  EventParameter("param1",FWEELIN_GETOFS(param1),T_float),
+                  EventParameter("param2",FWEELIN_GETOFS(param2),T_float),
+                  EventParameter("param3",FWEELIN_GETOFS(param3),T_float))
 
   int sub;      // Subroutine #
   float param1,     // Parameter 1
@@ -389,19 +388,10 @@ class KeyInputEvent : public Event {
     keysym = s.keysym;
     unicode = s.unicode;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("keydown",FWEELIN_GETOFS(down),T_char);
-    case 1:
-      return EventParameter("key",FWEELIN_GETOFS(keysym),T_int,SDLK_LAST);
-    case 2:
-      return EventParameter("unicode",FWEELIN_GETOFS(unicode),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(3,
+                  EventParameter("keydown",FWEELIN_GETOFS(down),T_char),
+                  EventParameter("key",FWEELIN_GETOFS(keysym),T_int,SDLK_LAST),
+                  EventParameter("unicode",FWEELIN_GETOFS(unicode),T_int))
 
   char down; // Nonzero if key is pressed, zero if key is released
   int keysym, // Keysym of key pressed
@@ -419,21 +409,11 @@ class LoopClickedEvent : public Event {
     loopid = s.loopid;
     in = s.in;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("down",FWEELIN_GETOFS(down),T_char);
-    case 1:
-      return EventParameter("button",FWEELIN_GETOFS(button),T_int);
-    case 2:
-      return EventParameter("loopid",FWEELIN_GETOFS(loopid),T_int);
-    case 3:
-      return EventParameter("in",FWEELIN_GETOFS(in),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(4,
+                  EventParameter("down",FWEELIN_GETOFS(down),T_char),
+                  EventParameter("button",FWEELIN_GETOFS(button),T_int),
+                  EventParameter("loopid",FWEELIN_GETOFS(loopid),T_int),
+                  EventParameter("in",FWEELIN_GETOFS(in),T_char))
 
   char down, // Nonzero if button is pressed, zero if button is released
     in;      // Zero if clicked in looptray, one if clicked in layout
@@ -451,19 +431,10 @@ class JoystickButtonInputEvent : public Event {
     joystick = s.joystick;
     button = s.button;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("down",FWEELIN_GETOFS(down),T_char);
-    case 1:
-      return EventParameter("button",FWEELIN_GETOFS(button),T_int);
-    case 2:
-      return EventParameter("joystick",FWEELIN_GETOFS(joystick),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(3,
+                  EventParameter("down",FWEELIN_GETOFS(down),T_char),
+                  EventParameter("button",FWEELIN_GETOFS(button),T_int),
+                  EventParameter("joystick",FWEELIN_GETOFS(joystick),T_int))
 
   char down;    // Nonzero if button is pressed, zero if button is released
   int button;   // Button # pressed/released
@@ -481,21 +452,11 @@ class MouseButtonInputEvent : public Event {
     x = s.x;
     y = s.y;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("down",FWEELIN_GETOFS(down),T_char);
-    case 1:
-      return EventParameter("button",FWEELIN_GETOFS(button),T_int);
-    case 2:
-      return EventParameter("x",FWEELIN_GETOFS(x),T_int);
-    case 3:
-      return EventParameter("y",FWEELIN_GETOFS(y),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(4,
+                  EventParameter("down",FWEELIN_GETOFS(down),T_char),
+                  EventParameter("button",FWEELIN_GETOFS(button),T_int),
+                  EventParameter("x",FWEELIN_GETOFS(x),T_int),
+                  EventParameter("y",FWEELIN_GETOFS(y),T_int))
 
   char down; // Nonzero if button is pressed, zero if button is released
   int button; // Button # pressed/released
@@ -511,17 +472,9 @@ class MouseMotionInputEvent : public Event {
     x = s.x;
     y = s.y;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("x",FWEELIN_GETOFS(x),T_int);
-    case 1:
-      return EventParameter("y",FWEELIN_GETOFS(y),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("x",FWEELIN_GETOFS(x),T_int),
+                  EventParameter("y",FWEELIN_GETOFS(y),T_int))
 
   int x, y;   // Coordinates of mouse motion (on screen)
 };
@@ -541,24 +494,13 @@ class MIDIControllerInputEvent : public Event {
     val = s.val;
     echo = s.echo;
   };
-  virtual int GetNumParams() { return 5; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("outport",FWEELIN_GETOFS(outport),T_int);
-    case 1:
-      return EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int);
-    case 2:
-      return EventParameter("controlnum",FWEELIN_GETOFS(ctrl),T_int,
-                            MAX_MIDI_CONTROLLERS);
-    case 3:
-      return EventParameter("controlval",FWEELIN_GETOFS(val),T_int);
-    case 4:
-      return EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(5,
+                  EventParameter("outport",FWEELIN_GETOFS(outport),T_int),
+                  EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int),
+                  EventParameter("controlnum",FWEELIN_GETOFS(ctrl),T_int,
+                                 MAX_MIDI_CONTROLLERS),
+                  EventParameter("controlval",FWEELIN_GETOFS(val),T_int),
+                  EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char))
 
   int outport, // # of MIDI output to send event to
     channel,   // MIDI channel
@@ -581,22 +523,12 @@ class MIDIChannelPressureInputEvent : public Event {
     val = s.val;
     echo = s.echo;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("outport",FWEELIN_GETOFS(outport),T_int);
-    case 1:
-      return EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int,
-                            MAX_MIDI_CHANNELS);
-    case 2:
-      return EventParameter("pressureval",FWEELIN_GETOFS(val),T_int);
-    case 3:
-      return EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(4,
+                  EventParameter("outport",FWEELIN_GETOFS(outport),T_int),
+                  EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int,
+                                 MAX_MIDI_CHANNELS),
+                  EventParameter("pressureval",FWEELIN_GETOFS(val),T_int),
+                  EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char))
 
   int outport, // # of MIDI output to send event to
       channel, // MIDI channel
@@ -618,22 +550,12 @@ class MIDIProgramChangeInputEvent : public Event {
     val = s.val;
     echo = s.echo;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("outport",FWEELIN_GETOFS(outport),T_int);
-    case 1:
-      return EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int,
-                            MAX_MIDI_CHANNELS);
-    case 2:
-      return EventParameter("programval",FWEELIN_GETOFS(val),T_int);
-    case 3:
-      return EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(4,
+                  EventParameter("outport",FWEELIN_GETOFS(outport),T_int),
+                  EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int,
+                                 MAX_MIDI_CHANNELS),
+                  EventParameter("programval",FWEELIN_GETOFS(val),T_int),
+                  EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char))
 
   int outport, // # of MIDI output to send event to
     channel, // MIDI channel
@@ -654,22 +576,12 @@ class MIDIPitchBendInputEvent : public Event {
     val = s.val;
     echo = s.echo;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("outport",FWEELIN_GETOFS(outport),T_int);
-    case 1:
-      return EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int,
-                            MAX_MIDI_CHANNELS);
-    case 2:
-      return EventParameter("pitchval",FWEELIN_GETOFS(val),T_int);
-    case 3:
-      return EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(4,
+                  EventParameter("outport",FWEELIN_GETOFS(outport),T_int),
+                  EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int,
+                                 MAX_MIDI_CHANNELS),
+                  EventParameter("pitchval",FWEELIN_GETOFS(val),T_int),
+                  EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char))
 
   int outport, // # of MIDI output to send event to
     channel,   // MIDI channel
@@ -692,26 +604,14 @@ class MIDIKeyInputEvent : public Event {
     vel = s.vel;
     echo = s.echo;
   };
-  virtual int GetNumParams() { return 6; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("outport",FWEELIN_GETOFS(outport),T_int);
-    case 1:
-      return EventParameter("keydown",FWEELIN_GETOFS(down),T_char);
-    case 2:
-      return EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int,
-                            MAX_MIDI_CHANNELS);
-    case 3:
-      return EventParameter("notenum",FWEELIN_GETOFS(notenum),T_int);
-    case 4:
-      return EventParameter("velocity",FWEELIN_GETOFS(vel),T_int);
-    case 5:
-      return EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(6,
+                  EventParameter("outport",FWEELIN_GETOFS(outport),T_int),
+                  EventParameter("keydown",FWEELIN_GETOFS(down),T_char),
+                  EventParameter("midichannel",FWEELIN_GETOFS(channel),T_int,
+                                 MAX_MIDI_CHANNELS),
+                  EventParameter("notenum",FWEELIN_GETOFS(notenum),T_int),
+                  EventParameter("velocity",FWEELIN_GETOFS(vel),T_int),
+                  EventParameter("routethroughpatch",FWEELIN_GETOFS(echo),T_char))
 
   char down; // Nonzero if key is pressed, zero if key is released
   int outport, // # of MIDI output to send event to
@@ -731,15 +631,8 @@ public:
     MIDIClockInputEvent &s = (MIDIClockInputEvent &) src;
     outport = s.outport;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-      case 0:
-        return EventParameter("outport",FWEELIN_GETOFS(outport),T_int);
-    }
-    
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("outport",FWEELIN_GETOFS(outport),T_int))
   
   int outport; // # of MIDI output to send event to
 };
@@ -757,17 +650,9 @@ public:
     outport = s.outport;
     start = s.start;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-      case 0:
-        return EventParameter("outport",FWEELIN_GETOFS(outport),T_int);
-      case 1:
-        return EventParameter("start",FWEELIN_GETOFS(start),T_char);
-    }
-    
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("outport",FWEELIN_GETOFS(outport),T_int),
+                  EventParameter("start",FWEELIN_GETOFS(start),T_char))
   
   int outport; // # of MIDI output to send event to
   char start;  // 1- MIDI Start, 0- MIDI Stop
@@ -789,21 +674,11 @@ class SetVariableEvent : public Event {
     maxjump.type = s.maxjump.type;
     maxjump = s.maxjump;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("var",FWEELIN_GETOFS(var),T_variableref);
-    case 1:
-      return EventParameter("value",FWEELIN_GETOFS(value),T_variable);      
-    case 2:
-      return EventParameter("maxjumpcheck",FWEELIN_GETOFS(maxjumpcheck),T_char);      
-    case 3:
-      return EventParameter("maxjump",FWEELIN_GETOFS(maxjump),T_variable);      
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(4,
+                  EventParameter("var",FWEELIN_GETOFS(var),T_variableref),
+                  EventParameter("value",FWEELIN_GETOFS(value),T_variable),
+                  EventParameter("maxjumpcheck",FWEELIN_GETOFS(maxjumpcheck),T_char),
+                  EventParameter("maxjump",FWEELIN_GETOFS(maxjump),T_variable))
 
   UserVariable *var;  // Variable to set
   UserVariable value, // Value to set it to
@@ -827,19 +702,10 @@ class ToggleVariableEvent : public Event {
     maxvalue = s.maxvalue;
     minvalue = s.minvalue;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) {
-    switch (n) {
-    case 0:
-      return EventParameter("var",FWEELIN_GETOFS(var),T_variableref);
-    case 1:
-      return EventParameter("maxvalue",FWEELIN_GETOFS(maxvalue),T_int);
-    case 2:
-      return EventParameter("minvalue",FWEELIN_GETOFS(minvalue),T_int);
-    }
-
-    return EventParameter();
-  };
+  EVT_PARAM_TABLE(3,
+                  EventParameter("var",FWEELIN_GETOFS(var),T_variableref),
+                  EventParameter("maxvalue",FWEELIN_GETOFS(maxvalue),T_int),
+                  EventParameter("minvalue",FWEELIN_GETOFS(minvalue),T_int))
 
   UserVariable *var;  // Variable to increment (toggle)
   int maxvalue,       // Maximum value of variable before wraparound
@@ -858,19 +724,10 @@ class SplitVariableMSBLSBEvent : public Event {
     msb = s.msb;
     lsb = s.lsb;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) {
-    switch (n) {
-    case 0:
-      return EventParameter("var",FWEELIN_GETOFS(var),T_variable);
-    case 1:
-      return EventParameter("msb",FWEELIN_GETOFS(msb),T_variableref);
-    case 2:
-      return EventParameter("lsb",FWEELIN_GETOFS(lsb),T_variableref);
-    }
-
-    return EventParameter();
-  };
+  EVT_PARAM_TABLE(3,
+                  EventParameter("var",FWEELIN_GETOFS(var),T_variable),
+                  EventParameter("msb",FWEELIN_GETOFS(msb),T_variableref),
+                  EventParameter("lsb",FWEELIN_GETOFS(lsb),T_variableref))
 
   UserVariable var;   // Variable to split
   UserVariable *msb,  // MSB of var will be stored here
@@ -894,21 +751,11 @@ class ParamSetGetAbsoluteParamIdxEvent : public Event {
     paramidx = s.paramidx;
     absidx = s.absidx;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) {
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    case 1:
-      return EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int);
-    case 2:
-      return EventParameter("paramidx",FWEELIN_GETOFS(paramidx),T_int);
-    case 3:
-      return EventParameter("absidx",FWEELIN_GETOFS(absidx),T_variableref);
-    }
-
-    return EventParameter();
-  };
+  EVT_PARAM_TABLE(4,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int),
+                  EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int),
+                  EventParameter("paramidx",FWEELIN_GETOFS(paramidx),T_int),
+                  EventParameter("absidx",FWEELIN_GETOFS(absidx),T_variableref))
 
   int interfaceid, // Interface in which parameter set display is defined
     displayid,     // Display ID of parameter set display
@@ -933,21 +780,11 @@ class ParamSetGetParamEvent : public Event {
     paramidx = s.paramidx;
     var = s.var;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) {
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    case 1:
-      return EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int);
-    case 2:
-      return EventParameter("paramidx",FWEELIN_GETOFS(paramidx),T_int);
-    case 3:
-      return EventParameter("var",FWEELIN_GETOFS(var),T_variableref);
-    }
-
-    return EventParameter();
-  };
+  EVT_PARAM_TABLE(4,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int),
+                  EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int),
+                  EventParameter("paramidx",FWEELIN_GETOFS(paramidx),T_int),
+                  EventParameter("var",FWEELIN_GETOFS(var),T_variableref))
 
   int interfaceid, // Interface in which parameter set display is defined
     displayid,     // Display ID of parameter set display
@@ -972,21 +809,11 @@ class ParamSetSetParamEvent : public Event {
     paramidx = s.paramidx;
     value = s.value;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) {
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    case 1:
-      return EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int);
-    case 2:
-      return EventParameter("paramidx",FWEELIN_GETOFS(paramidx),T_int);
-    case 3:
-      return EventParameter("value",FWEELIN_GETOFS(value),T_float);
-    }
-
-    return EventParameter();
-  };
+  EVT_PARAM_TABLE(4,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int),
+                  EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int),
+                  EventParameter("paramidx",FWEELIN_GETOFS(paramidx),T_int),
+                  EventParameter("value",FWEELIN_GETOFS(value),T_float))
 
   int interfaceid, // Interface in which parameter set display is defined
     displayid,     // Display ID of parameter set display
@@ -1007,19 +834,10 @@ class LogFaderVolToLinearEvent : public Event {
     fadervol = s.fadervol;
     scale = s.scale;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) {
-    switch (n) {
-    case 0:
-      return EventParameter("var",FWEELIN_GETOFS(var),T_variableref);
-    case 1:
-      return EventParameter("fadervol",FWEELIN_GETOFS(fadervol),T_variable);
-    case 2:
-      return EventParameter("scale",FWEELIN_GETOFS(scale),T_float);
-    }
-
-    return EventParameter();
-  };
+  EVT_PARAM_TABLE(3,
+                  EventParameter("var",FWEELIN_GETOFS(var),T_variableref),
+                  EventParameter("fadervol",FWEELIN_GETOFS(fadervol),T_variable),
+                  EventParameter("scale",FWEELIN_GETOFS(scale),T_float))
 
   UserVariable *var;     // Variable to store converted fadervol
   UserVariable fadervol; // Fader volume to convert to linear
@@ -1054,25 +872,13 @@ class ALSAMixerControlSetEvent : public Event {
     val3 = s.val3;
     val4 = s.val4;
   };
-  virtual int GetNumParams() { return 6; };
-  virtual EventParameter GetParam(int n) {
-    switch (n) {
-    case 0:
-      return EventParameter("hwid",FWEELIN_GETOFS(hwid),T_int);
-    case 1:
-      return EventParameter("numid",FWEELIN_GETOFS(numid),T_int);
-    case 2:
-      return EventParameter("val1",FWEELIN_GETOFS(val1),T_int);
-    case 3:
-      return EventParameter("val2",FWEELIN_GETOFS(val2),T_int);
-    case 4:
-      return EventParameter("val3",FWEELIN_GETOFS(val3),T_int);
-    case 5:
-      return EventParameter("val4",FWEELIN_GETOFS(val4),T_int);
-    }
-
-    return EventParameter();
-  };
+  EVT_PARAM_TABLE(6,
+                  EventParameter("hwid",FWEELIN_GETOFS(hwid),T_int),
+                  EventParameter("numid",FWEELIN_GETOFS(numid),T_int),
+                  EventParameter("val1",FWEELIN_GETOFS(val1),T_int),
+                  EventParameter("val2",FWEELIN_GETOFS(val2),T_int),
+                  EventParameter("val3",FWEELIN_GETOFS(val3),T_int),
+                  EventParameter("val4",FWEELIN_GETOFS(val4),T_int))
 
   int hwid,   // Hardware interface ID for alsa (ie hwid=0 is hw:0)
     numid;    // ALSA mixer control numid (ie 'amixer cset numid=5')
@@ -1096,19 +902,10 @@ class VideoShowLoopEvent : public Event {
     layoutid = s.layoutid;
     loopid = s.loopid;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    case 1:
-      return EventParameter("layoutid",FWEELIN_GETOFS(layoutid),T_int);
-    case 2:
-      return EventParameter("loopid",FWEELIN_GETOFS(loopid),T_range);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(3,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int),
+                  EventParameter("layoutid",FWEELIN_GETOFS(layoutid),T_int),
+                  EventParameter("loopid",FWEELIN_GETOFS(loopid),T_range))
 
   int interfaceid, // Interface in which layout is defined
     layoutid;      // Layout in which to show loops
@@ -1132,19 +929,10 @@ class VideoShowSnapshotPageEvent : public Event {
     displayid = s.displayid;
     page = s.page;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    case 1:
-      return EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int);
-    case 2:
-      return EventParameter("page",FWEELIN_GETOFS(page),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(3,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int),
+                  EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int),
+                  EventParameter("page",FWEELIN_GETOFS(page),T_int))
 
   int interfaceid, // Interface in which snapshot display is defined
     displayid,     // Display ID of snapshot display
@@ -1167,19 +955,10 @@ class VideoShowParamSetBankEvent : public Event {
     displayid = s.displayid;
     bank = s.bank;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) {
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    case 1:
-      return EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int);
-    case 2:
-      return EventParameter("bank",FWEELIN_GETOFS(bank),T_int);
-    }
-
-    return EventParameter();
-  };
+  EVT_PARAM_TABLE(3,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int),
+                  EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int),
+                  EventParameter("bank",FWEELIN_GETOFS(bank),T_int))
 
   int interfaceid, // Interface in which parameter set display is defined
     displayid,     // Display ID of parameter set display
@@ -1202,19 +981,10 @@ class VideoShowParamSetPageEvent : public Event {
     displayid = s.displayid;
     page = s.page;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) {
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    case 1:
-      return EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int);
-    case 2:
-      return EventParameter("page",FWEELIN_GETOFS(page),T_int);
-    }
-
-    return EventParameter();
-  };
+  EVT_PARAM_TABLE(3,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int),
+                  EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int),
+                  EventParameter("page",FWEELIN_GETOFS(page),T_int))
 
   int interfaceid, // Interface in which parameter set display is defined
     displayid,     // Display ID of parameter set display
@@ -1238,21 +1008,11 @@ class VideoShowLayoutEvent : public Event {
     show = s.show;
     hideothers = s.hideothers;
   };
-  virtual int GetNumParams() { return 4; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    case 1:
-      return EventParameter("layoutid",FWEELIN_GETOFS(layoutid),T_int);
-    case 2:
-      return EventParameter("show",FWEELIN_GETOFS(show),T_char);
-    case 3:
-      return EventParameter("hideothers",FWEELIN_GETOFS(hideothers),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(4,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int),
+                  EventParameter("layoutid",FWEELIN_GETOFS(layoutid),T_int),
+                  EventParameter("show",FWEELIN_GETOFS(show),T_char),
+                  EventParameter("hideothers",FWEELIN_GETOFS(hideothers),T_char))
 
   int interfaceid, // Interface in which layout is defined
     layoutid;      // Layout to show
@@ -1271,15 +1031,8 @@ class VideoSwitchInterfaceEvent : public Event {
     VideoSwitchInterfaceEvent &s = (VideoSwitchInterfaceEvent &) src;
     interfaceid = s.interfaceid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int))
 
   int interfaceid; // Interface to switch to
 };
@@ -1299,19 +1052,10 @@ class VideoShowDisplayEvent : public Event {
     displayid = s.displayid;
     show = s.show;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    case 1:
-      return EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int);
-    case 2:
-      return EventParameter("show",FWEELIN_GETOFS(show),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(3,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int),
+                  EventParameter("displayid",FWEELIN_GETOFS(displayid),T_int),
+                  EventParameter("show",FWEELIN_GETOFS(show),T_char))
 
   int interfaceid, // Interface in which display is defined
     displayid;     // Display to show
@@ -1329,15 +1073,8 @@ class ShowDebugInfoEvent : public Event {
     ShowDebugInfoEvent &s = (ShowDebugInfoEvent &) src;
     show = s.show;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("show",FWEELIN_GETOFS(show),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("show",FWEELIN_GETOFS(show),T_char))
 
   char show;       // Show debugging info onscreen?
 };
@@ -1353,15 +1090,8 @@ class VideoShowHelpEvent : public Event {
     VideoShowHelpEvent &s = (VideoShowHelpEvent &) src;
     page = s.page;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("page",FWEELIN_GETOFS(page),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("page",FWEELIN_GETOFS(page),T_int))
 
   int page;       // Help page to show or 0 for no help
 };
@@ -1377,16 +1107,9 @@ class VideoFullScreenEvent : public Event {
     VideoFullScreenEvent &s = (VideoFullScreenEvent &) src;
     fullscreen = s.fullscreen;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("fullscreen",FWEELIN_GETOFS(fullscreen),
-                            T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("fullscreen",FWEELIN_GETOFS(fullscreen),
+                                 T_char))
 
   char fullscreen;       // Freewheeling is full screen or in a window?
 };
@@ -1407,15 +1130,8 @@ class StartInterfaceEvent : public Event {
     StartInterfaceEvent &s = (StartInterfaceEvent &) src;
     interfaceid = s.interfaceid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter(INTERFACEID,FWEELIN_GETOFS(interfaceid),T_int))
 
   int interfaceid; // Interface to start
 };
@@ -1432,15 +1148,8 @@ class SlideMasterInVolumeEvent : public Event {
     SlideMasterInVolumeEvent &s = (SlideMasterInVolumeEvent &) src;
     slide = s.slide;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("slide",FWEELIN_GETOFS(slide),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("slide",FWEELIN_GETOFS(slide),T_float))
 
   float slide; // Change in speed of amplitude slide
 };
@@ -1452,15 +1161,8 @@ class SlideMasterOutVolumeEvent : public Event {
     SlideMasterOutVolumeEvent &s = (SlideMasterOutVolumeEvent &) src;
     slide = s.slide;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("slide",FWEELIN_GETOFS(slide),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("slide",FWEELIN_GETOFS(slide),T_float))
 
   float slide; // Change in speed of amplitude slide
 };
@@ -1473,17 +1175,9 @@ class SlideInVolumeEvent : public Event {
     input = s.input;
     slide = s.slide;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("input",FWEELIN_GETOFS(input),T_int);
-    case 1:
-      return EventParameter("slide",FWEELIN_GETOFS(slide),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("input",FWEELIN_GETOFS(input),T_int),
+                  EventParameter("slide",FWEELIN_GETOFS(slide),T_float))
 
   int input;   // Number of input to change volume for
   float slide; // Change in speed of amplitude slide
@@ -1502,17 +1196,9 @@ class SetMasterInVolumeEvent : public Event {
     vol = s.vol;
     fadervol = s.fadervol;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("vol",FWEELIN_GETOFS(vol),T_float);
-    case 1:
-      return EventParameter("fadervol",FWEELIN_GETOFS(fadervol),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("vol",FWEELIN_GETOFS(vol),T_float),
+                  EventParameter("fadervol",FWEELIN_GETOFS(fadervol),T_float))
 
   float vol, // Linear volume to set
     fadervol; // Logarithmic volume to set (by fader throw)
@@ -1531,17 +1217,9 @@ class SetMasterOutVolumeEvent : public Event {
     vol = s.vol;
     fadervol = s.fadervol;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("vol",FWEELIN_GETOFS(vol),T_float);
-    case 1:
-      return EventParameter("fadervol",FWEELIN_GETOFS(fadervol),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("vol",FWEELIN_GETOFS(vol),T_float),
+                  EventParameter("fadervol",FWEELIN_GETOFS(fadervol),T_float))
 
   float vol,  // Linear volume to set
     fadervol; // Logarithmic volume to set (by fader throw)
@@ -1562,19 +1240,10 @@ class SetInVolumeEvent : public Event {
     vol = s.vol;
     fadervol = s.fadervol;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("input",FWEELIN_GETOFS(input),T_int);
-    case 1:
-      return EventParameter("vol",FWEELIN_GETOFS(vol),T_float);
-    case 2:
-      return EventParameter("fadervol",FWEELIN_GETOFS(fadervol),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(3,
+                  EventParameter("input",FWEELIN_GETOFS(input),T_int),
+                  EventParameter("vol",FWEELIN_GETOFS(vol),T_float),
+                  EventParameter("fadervol",FWEELIN_GETOFS(fadervol),T_float))
 
   int input;  // Number of input to change volume for
   float vol,  // Linear volume to set
@@ -1588,15 +1257,8 @@ class ToggleInputRecordEvent : public Event {
     ToggleInputRecordEvent &s = (ToggleInputRecordEvent &) src;
     input = s.input;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("input",FWEELIN_GETOFS(input),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("input",FWEELIN_GETOFS(input),T_int))
 
   int input; // Number of input to toggle for recording
 };
@@ -1608,15 +1270,8 @@ class SetMidiEchoPortEvent : public Event {
     SetMidiEchoPortEvent &s = (SetMidiEchoPortEvent &) src;
     echoport = s.echoport;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("echoport",FWEELIN_GETOFS(echoport),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("echoport",FWEELIN_GETOFS(echoport),T_int))
 
   int echoport; // Port # to echo MIDI events to or 0 for disable echo
 };
@@ -1628,15 +1283,8 @@ class SetMidiEchoChannelEvent : public Event {
     SetMidiEchoChannelEvent &s = (SetMidiEchoChannelEvent &) src;
     echochannel = s.echochannel;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("echochannel",FWEELIN_GETOFS(echochannel),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("echochannel",FWEELIN_GETOFS(echochannel),T_int))
 
   int echochannel; // Override MIDI channel for MIDI event echo 
                    // (-1 to leave as is)
@@ -1649,15 +1297,8 @@ class AdjustMidiTransposeEvent : public Event {
     AdjustMidiTransposeEvent &s = (AdjustMidiTransposeEvent &) src;
     adjust = s.adjust;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("adjust",FWEELIN_GETOFS(adjust),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("adjust",FWEELIN_GETOFS(adjust),T_int))
 
   int adjust; // Number of semitones to add to MIDI transpose
 };
@@ -1669,15 +1310,8 @@ class FluidSynthEnableEvent : public Event {
     FluidSynthEnableEvent &s = (FluidSynthEnableEvent &) src;
     enable = s.enable;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("enable",FWEELIN_GETOFS(enable),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("enable",FWEELIN_GETOFS(enable),T_char))
 
   char enable; // FluidSynth enabled?
 };
@@ -1693,15 +1327,8 @@ class SetMidiTuningEvent : public Event {
     SetMidiTuningEvent &s = (SetMidiTuningEvent &) src;
     tuning = s.tuning;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("tuning",FWEELIN_GETOFS(tuning),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("tuning",FWEELIN_GETOFS(tuning),T_int))
 
   int tuning; // New offset of 0 position for pitch bender- 
               // shifts whole pitch bend by this value
@@ -1715,17 +1342,9 @@ class SetTriggerVolumeEvent : public Event {
     index = s.index;
     vol = s.vol;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("loopid",FWEELIN_GETOFS(index),T_int);
-    case 1:
-      return EventParameter("vol",FWEELIN_GETOFS(vol),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("loopid",FWEELIN_GETOFS(index),T_int),
+                  EventParameter("vol",FWEELIN_GETOFS(vol),T_float))
 
   int index;   // Index of loop to set trigger volume for
   float vol;   // New trigger volume
@@ -1739,17 +1358,9 @@ class SlideLoopAmpEvent : public Event {
     index = s.index;
     slide = s.slide;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("loopid",FWEELIN_GETOFS(index),T_int);
-    case 1:
-      return EventParameter("slide",FWEELIN_GETOFS(slide),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("loopid",FWEELIN_GETOFS(index),T_int),
+                  EventParameter("slide",FWEELIN_GETOFS(slide),T_float))
 
   int index;   // Index of loop to slide amplitude for
   float slide; // Change in speed of slide
@@ -1763,17 +1374,9 @@ class SetLoopAmpEvent : public Event {
     index = s.index;
     amp = s.amp;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("loopid",FWEELIN_GETOFS(index),T_int);
-    case 1:
-      return EventParameter("amp",FWEELIN_GETOFS(amp),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("loopid",FWEELIN_GETOFS(index),T_int),
+                  EventParameter("amp",FWEELIN_GETOFS(amp),T_float))
 
   int index; // Index of loop to set amplitude for
   float amp; // Amplitude to set loop at
@@ -1787,17 +1390,9 @@ class AdjustLoopAmpEvent : public Event {
     index = s.index;
     ampfactor = s.ampfactor;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("loopid",FWEELIN_GETOFS(index),T_int);
-    case 1:
-      return EventParameter("ampfactor",FWEELIN_GETOFS(ampfactor),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("loopid",FWEELIN_GETOFS(index),T_int),
+                  EventParameter("ampfactor",FWEELIN_GETOFS(ampfactor),T_float))
 
   int index;  // Index of loop to adjust amplitude for
   float ampfactor; // Factor to multiply loop amplitudesby
@@ -1824,25 +1419,13 @@ class TriggerLoopEvent : public Event {
     od = s.od;
     od_fb = s.od_fb;
   };
-  virtual int GetNumParams() { return 6; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("loopid",FWEELIN_GETOFS(index),T_int);
-    case 1:
-      return EventParameter("engage",FWEELIN_GETOFS(engage),T_int);
-    case 2:
-      return EventParameter("shot",FWEELIN_GETOFS(shot),T_char);      
-    case 3:
-      return EventParameter("vol",FWEELIN_GETOFS(vol),T_float);
-    case 4:
-      return EventParameter("overdub",FWEELIN_GETOFS(od),T_char);
-    case 5:
-      return EventParameter("overdubfeedback",FWEELIN_GETOFS(od_fb),T_variableref);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(6,
+                  EventParameter("loopid",FWEELIN_GETOFS(index),T_int),
+                  EventParameter("engage",FWEELIN_GETOFS(engage),T_int),
+                  EventParameter("shot",FWEELIN_GETOFS(shot),T_char),
+                  EventParameter("vol",FWEELIN_GETOFS(vol),T_float),
+                  EventParameter("overdub",FWEELIN_GETOFS(od),T_char),
+                  EventParameter("overdubfeedback",FWEELIN_GETOFS(od_fb),T_variableref))
 
   int index;   // Index of loop
   int engage;  // -1 is the default behavior, where each trigger-loop
@@ -1863,17 +1446,9 @@ class MoveLoopEvent : public Event {
     oldloopid = s.oldloopid;
     newloopid = s.newloopid;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("oldloopid",FWEELIN_GETOFS(oldloopid),T_int);
-    case 1:
-      return EventParameter("newloopid",FWEELIN_GETOFS(newloopid),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("oldloopid",FWEELIN_GETOFS(oldloopid),T_int),
+                  EventParameter("newloopid",FWEELIN_GETOFS(newloopid),T_int))
 
   int oldloopid, // Old index of loop
     newloopid; // New index of loop
@@ -1886,15 +1461,8 @@ class EraseLoopEvent : public Event {
     EraseLoopEvent &s = (EraseLoopEvent &) src;
     index = s.index;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("loopid",FWEELIN_GETOFS(index),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("loopid",FWEELIN_GETOFS(index),T_int))
 
   int index; // Index of loop
 };
@@ -1916,15 +1484,8 @@ class EraseSelectedLoopsEvent : public Event {
       (EraseSelectedLoopsEvent &) src;
     setid = s.setid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("setid",FWEELIN_GETOFS(setid),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("setid",FWEELIN_GETOFS(setid),T_int))
 
   int setid; // ID # of the selection set to work on
 };
@@ -1946,15 +1507,8 @@ class SetAutoLoopSavingEvent : public Event {
     SetAutoLoopSavingEvent &s = (SetAutoLoopSavingEvent &) src;
     save = s.save;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("save",FWEELIN_GETOFS(save),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("save",FWEELIN_GETOFS(save),T_char))
 
   char save; // Are we autosaving loops?
 };
@@ -1966,15 +1520,8 @@ class SaveLoopEvent : public Event {
     SaveLoopEvent &s = (SaveLoopEvent &) src;
     index = s.index;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("loopid",FWEELIN_GETOFS(index),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("loopid",FWEELIN_GETOFS(index),T_int))
 
   int index; // Index of loop to save
 };
@@ -1996,15 +1543,8 @@ class SetLoadLoopIdEvent : public Event {
     SetLoadLoopIdEvent &s = (SetLoadLoopIdEvent &) src;
     index = s.index;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("loopid",FWEELIN_GETOFS(index),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("loopid",FWEELIN_GETOFS(index),T_int))
 
   int index; // Index to load loops into
 };
@@ -2022,15 +1562,8 @@ class SetDefaultLoopPlacementEvent : public Event {
     SetDefaultLoopPlacementEvent &s = (SetDefaultLoopPlacementEvent &) src;
     looprange = s.looprange;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("looprange",FWEELIN_GETOFS(looprange),T_range);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("looprange",FWEELIN_GETOFS(looprange),T_range))
 
   Range looprange; // Range of loop IDs to be used when others are full
 };
@@ -2050,19 +1583,10 @@ class BrowserMoveToItemEvent : public Event {
     adjust = s.adjust;
     jumpadjust = s.jumpadjust;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int);
-    case 1:
-      return EventParameter("adjust",FWEELIN_GETOFS(adjust),T_int);
-    case 2:
-      return EventParameter("jumpadjust",FWEELIN_GETOFS(jumpadjust),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(3,
+                  EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int),
+                  EventParameter("adjust",FWEELIN_GETOFS(adjust),T_int),
+                  EventParameter("jumpadjust",FWEELIN_GETOFS(jumpadjust),T_int))
 
   int browserid;   // Display ID of browser
   int adjust;      // Move fwd/back by adjust items
@@ -2082,17 +1606,9 @@ class BrowserMoveToItemAbsoluteEvent : public Event {
     browserid = s.browserid;
     idx = s.idx;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int);
-    case 1:
-      return EventParameter("idx",FWEELIN_GETOFS(idx),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int),
+                  EventParameter("idx",FWEELIN_GETOFS(idx),T_int))
 
   int browserid;   // Display ID of browser
   int idx;         // Index to move to (absolute from beginning of list)
@@ -2109,15 +1625,8 @@ class BrowserSelectItemEvent : public Event {
     BrowserSelectItemEvent &s = (BrowserSelectItemEvent &) src;
     browserid = s.browserid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int))
 
   int browserid;   // Display ID of browser
 };
@@ -2133,15 +1642,8 @@ class BrowserRenameItemEvent : public Event {
     BrowserRenameItemEvent &s = (BrowserRenameItemEvent &) src;
     browserid = s.browserid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int))
 
   int browserid;   // Display ID of browser
 };
@@ -2157,15 +1659,8 @@ class BrowserItemBrowsedEvent : public Event {
     BrowserItemBrowsedEvent &s = (BrowserItemBrowsedEvent &) src;
     browserid = s.browserid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("browserid",FWEELIN_GETOFS(browserid),T_int))
 
   int browserid;   // Display ID of browser
 };
@@ -2181,15 +1676,8 @@ class PatchBrowserMoveToBankEvent : public Event {
     PatchBrowserMoveToBankEvent &s = (PatchBrowserMoveToBankEvent &) src;
     direction = s.direction;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("direction",FWEELIN_GETOFS(direction),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("direction",FWEELIN_GETOFS(direction),T_int))
 
   int direction;   // Direction to move (+1/-1 next/previous)
 };
@@ -2207,15 +1695,8 @@ class PatchBrowserMoveToBankByIndexEvent : public Event {
       (PatchBrowserMoveToBankByIndexEvent &) src;
     index = s.index;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("index",FWEELIN_GETOFS(index),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("index",FWEELIN_GETOFS(index),T_int))
 
   int index; // Index of patchbank to choose
 };
@@ -2233,17 +1714,9 @@ class RenameLoopEvent : public Event {
     loopid = s.loopid;
     in = s.in;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("loopid",FWEELIN_GETOFS(loopid),T_int);
-    case 1:
-      return EventParameter("in",FWEELIN_GETOFS(in),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("loopid",FWEELIN_GETOFS(loopid),T_int),
+                  EventParameter("in",FWEELIN_GETOFS(in),T_char))
 
   int loopid; // Loop ID to rename
   char in;    // Rename in loop tray (0) or layout (1)
@@ -2256,15 +1729,8 @@ class SelectPulseEvent : public Event {
     SelectPulseEvent &s = (SelectPulseEvent &) src;
     pulse = s.pulse;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("pulse",FWEELIN_GETOFS(pulse),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("pulse",FWEELIN_GETOFS(pulse),T_int))
 
   int pulse; // Index of pulse
 };
@@ -2276,15 +1742,8 @@ class DeletePulseEvent : public Event {
     DeletePulseEvent &s = (DeletePulseEvent &) src;
     pulse = s.pulse;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("pulse",FWEELIN_GETOFS(pulse),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("pulse",FWEELIN_GETOFS(pulse),T_int))
 
   int pulse; // Index of pulse
 };
@@ -2297,17 +1756,9 @@ class TapPulseEvent : public Event {
     pulse = s.pulse;
     newlen = s.newlen;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("pulse",FWEELIN_GETOFS(pulse),T_int);
-    case 1:
-      return EventParameter("newlen",FWEELIN_GETOFS(newlen),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("pulse",FWEELIN_GETOFS(pulse),T_int),
+                  EventParameter("newlen",FWEELIN_GETOFS(newlen),T_char))
 
   int pulse;   // Index of pulse
   char newlen; // Nonzero to redefine pulse length or create new pulse
@@ -2321,17 +1772,9 @@ class SwitchMetronomeEvent : public Event {
     pulse = s.pulse;
     metronome = s.metronome;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("pulse",FWEELIN_GETOFS(pulse),T_int);
-    case 1:
-      return EventParameter("metronome",FWEELIN_GETOFS(metronome),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("pulse",FWEELIN_GETOFS(pulse),T_int),
+                  EventParameter("metronome",FWEELIN_GETOFS(metronome),T_char))
 
   int pulse;      // Index of pulse
   char metronome; // Metronome active?
@@ -2344,15 +1787,8 @@ class SetSyncTypeEvent : public Event {
     SetSyncTypeEvent &s = (SetSyncTypeEvent &) src;
     stype = s.stype;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("type",FWEELIN_GETOFS(stype),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("type",FWEELIN_GETOFS(stype),T_char))
 
   char stype; // Nonzero for beat sync, zero for bar sync
 };
@@ -2364,15 +1800,8 @@ class SetSyncSpeedEvent : public Event {
     SetSyncSpeedEvent &s = (SetSyncSpeedEvent &) src;
     sspd = s.sspd;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("speed",FWEELIN_GETOFS(sspd),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("speed",FWEELIN_GETOFS(sspd),T_int))
 
   int sspd; // Number of external transport beats/bars per internal pulse
 };
@@ -2384,15 +1813,8 @@ public:
     SetMidiSyncEvent &s = (SetMidiSyncEvent &) src;
     midisync = s.midisync;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-      case 0:
-        return EventParameter("midisync",FWEELIN_GETOFS(midisync),T_int);
-    }
-    
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("midisync",FWEELIN_GETOFS(midisync),T_int))
   
   int midisync; // Nonzero to transmit MIDI sync, zero for no MIDI sync
 };
@@ -2405,17 +1827,9 @@ class ToggleSelectLoopEvent : public Event {
     setid = s.setid;
     loopid = s.loopid;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("setid",FWEELIN_GETOFS(setid),T_int);
-    case 1:
-      return EventParameter("loopid",FWEELIN_GETOFS(loopid),T_int);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("setid",FWEELIN_GETOFS(setid),T_int),
+                  EventParameter("loopid",FWEELIN_GETOFS(loopid),T_int))
 
   int setid, // ID # of the selection set in which to toggle the loop
     loopid;  // ID # of loop to toggle
@@ -2429,17 +1843,9 @@ class SelectOnlyPlayingLoopsEvent : public Event {
     setid = s.setid;
     playing = s.playing;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("setid",FWEELIN_GETOFS(setid),T_int);
-    case 1:
-      return EventParameter("playing",FWEELIN_GETOFS(playing),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("setid",FWEELIN_GETOFS(setid),T_int),
+                  EventParameter("playing",FWEELIN_GETOFS(playing),T_char))
 
   int setid; // ID # of the selection set to work on
   char playing; // Nonzero if we should select only those loops currently 
@@ -2455,17 +1861,9 @@ class SelectAllLoopsEvent : public Event {
     setid = s.setid;
     select = s.select;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("setid",FWEELIN_GETOFS(setid),T_int);
-    case 1:
-      return EventParameter("select",FWEELIN_GETOFS(select),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("setid",FWEELIN_GETOFS(setid),T_int),
+                  EventParameter("select",FWEELIN_GETOFS(select),T_char))
 
   int setid; // ID # of the selection set to work on
   char select; // Nonzero to select/zero to unselect all loops
@@ -2478,15 +1876,8 @@ public:
     InvertSelectionEvent &s = (InvertSelectionEvent &) src;
     setid = s.setid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-      case 0:
-        return EventParameter("setid",FWEELIN_GETOFS(setid),T_int);
-    }
-    
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("setid",FWEELIN_GETOFS(setid),T_int))
   
   int setid; // ID # of the selection set to invert (select all other loops)
 };
@@ -2502,15 +1893,8 @@ public:
     CreateSnapshotEvent &s = (CreateSnapshotEvent &) src;
     snapid = s.snapid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-      case 0:
-        return EventParameter("snapid",FWEELIN_GETOFS(snapid),T_int);
-    }
-    
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("snapid",FWEELIN_GETOFS(snapid),T_int))
   
   int snapid; // Create and store snapshot #snapid
 };
@@ -2528,17 +1912,9 @@ public:
     snapid1 = s.snapid1;
     snapid2 = s.snapid2;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-      case 0:
-        return EventParameter("snapid1",FWEELIN_GETOFS(snapid1),T_int);
-      case 1:
-        return EventParameter("snapid2",FWEELIN_GETOFS(snapid2),T_int);
-    }
-    
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("snapid1",FWEELIN_GETOFS(snapid1),T_int),
+                  EventParameter("snapid2",FWEELIN_GETOFS(snapid2),T_int))
   
   int snapid1, snapid2; // Swap these two snapshots 
 };
@@ -2554,15 +1930,8 @@ public:
     RenameSnapshotEvent &s = (RenameSnapshotEvent &) src;
     snapid = s.snapid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-      case 0:
-        return EventParameter("snapid",FWEELIN_GETOFS(snapid),T_int);
-    }
-    
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("snapid",FWEELIN_GETOFS(snapid),T_int))
   
   int snapid; // Rename snapshot #snapid
 };
@@ -2578,15 +1947,8 @@ public:
     TriggerSnapshotEvent &s = (TriggerSnapshotEvent &) src;
     snapid = s.snapid;
   };
-  virtual int GetNumParams() { return 1; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-      case 0:
-        return EventParameter("snapid",FWEELIN_GETOFS(snapid),T_int);
-    }
-    
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(1,
+                  EventParameter("snapid",FWEELIN_GETOFS(snapid),T_int))
   
   int snapid; // Trigger snapshot #snapid
 };
@@ -2606,19 +1968,10 @@ class TriggerSelectedLoopsEvent : public Event {
     vol = s.vol;
     toggleloops = s.toggleloops;
   };
-  virtual int GetNumParams() { return 3; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("setid",FWEELIN_GETOFS(setid),T_int);
-    case 1:
-      return EventParameter("vol",FWEELIN_GETOFS(vol),T_float);
-    case 2:
-      return EventParameter("toggleloops",FWEELIN_GETOFS(toggleloops),T_char);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(3,
+                  EventParameter("setid",FWEELIN_GETOFS(setid),T_int),
+                  EventParameter("vol",FWEELIN_GETOFS(vol),T_float),
+                  EventParameter("toggleloops",FWEELIN_GETOFS(toggleloops),T_char))
 
   int setid; // ID # of the selection set to work on
   float vol; // Volume at which to trigger selected loops
@@ -2640,17 +1993,9 @@ class SetSelectedLoopsTriggerVolumeEvent : public Event {
     setid = s.setid;
     vol = s.vol;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("setid",FWEELIN_GETOFS(setid),T_int);
-    case 1:
-      return EventParameter("vol",FWEELIN_GETOFS(vol),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("setid",FWEELIN_GETOFS(setid),T_int),
+                  EventParameter("vol",FWEELIN_GETOFS(vol),T_float))
 
   int setid; // ID # of the selection set to work on
   float vol; // Trigger volume to set for loops
@@ -2671,17 +2016,9 @@ class AdjustSelectedLoopsAmpEvent : public Event {
     setid = s.setid;
     ampfactor = s.ampfactor;
   };
-  virtual int GetNumParams() { return 2; };
-  virtual EventParameter GetParam(int n) { 
-    switch (n) {
-    case 0:
-      return EventParameter("setid",FWEELIN_GETOFS(setid),T_int);
-    case 1:
-      return EventParameter("ampfactor",FWEELIN_GETOFS(ampfactor),T_float);
-    }
-
-    return EventParameter();
-  };    
+  EVT_PARAM_TABLE(2,
+                  EventParameter("setid",FWEELIN_GETOFS(setid),T_int),
+                  EventParameter("ampfactor",FWEELIN_GETOFS(ampfactor),T_float))
 
   int setid;       // ID # of the selection set to work on
   float ampfactor; // Factor to multiply all loop amplitudes by

@@ -824,7 +824,7 @@ void VideoIO::Squeeze_BlitSurface(SDL_Surface *in, SDL_Surface *out,
 // Justify is 0 for default justify, 1 for center, and 2 for opposite side
 // Returns size of text drawn in sx and sy (optionally)
 int VideoIO::draw_text(SDL_Surface *out, TTF_Font *font,
-                       char *str, int x, int y, SDL_Color clr, 
+                       const char *str, int x, int y, SDL_Color clr, 
                        char justifyx, char justifyy, int *sx, int *sy) {
   SDL_Surface *text;
   SDL_Rect dstrect;
@@ -1095,7 +1095,7 @@ char VideoIO::DrawLoop(LoopManager *loopmgr, int i,
         // Draw text with cursor
         int sx, sy;
         int txty = dispy+fully;
-        char *curn = renamer->GetCurName();
+        const char *curn = renamer->GetCurName();
         if (*curn != '\0')
           VideoIO::draw_text(screen,smallfont,curn,
                              dispx,txty,txtclr2,0,2,&sx,&sy);
@@ -1491,7 +1491,7 @@ void VideoIO::video_event_loop ()
   const static int CHECK_SIZE_FRAMES = 20;
   int checksizecnt = CHECK_SIZE_FRAMES;
   int num_streams = 0;          // Number of output streams
-  char *stream_type = "";       // Type (extension) of output stream
+  const char *stream_type = ""; // Type (extension) of output stream
   double streamoutsize = 0.0;   // Last checked size of all output streams.
 
   video_time = 0;
@@ -1708,7 +1708,7 @@ void VideoIO::video_event_loop ()
         FILLED_PIE(screen,pulsex,curpulsey,(int) (pulsepiemag * pulsescale),0,359,0,0,0,255);
         FILLED_PIE(screen,pulsex,curpulsey,(int) (pulsepiemag * pulsescale),0,
                    (int) (360*a->GetPct()),127,127,127,255);
-        sprintf(tmp,"%d",i+1);
+        snprintf(tmp,sizeof(tmp),"%d",i+1);
         draw_text(screen,mainfont,tmp,pulsex-pulsepiemag,curpulsey-
                   pulsepiemag,red);
 
@@ -1823,7 +1823,7 @@ void VideoIO::video_event_loop ()
         streamoutsize = app->getSTREAMSTATS(stream_type,num_streams);
       }
 
-      sprintf(tmp,"%s   %.1f mb  (%d streams)",
+      snprintf(tmp,sizeof(tmp),"%s   %.1f mb  (%d streams)",
           app->getSTREAMOUTNAME_DISPLAY().c_str(),streamoutsize,num_streams);
     }
     draw_text(screen,mainfont,tmp,patchx,patchy-OCY(22),gray);

@@ -907,7 +907,7 @@ class FloConfig {
   inline codec GetStreamOutFormat() { return streamoutformat; }; 
   codec streamoutformat;
 
-  inline char *GetCodecName (codec i) {
+  inline const char *GetCodecName (codec i) {
     switch (i) {
       case VORBIS: return "ogg"; 
       case WAV: return "wav"; 
@@ -925,7 +925,7 @@ class FloConfig {
     return UNKNOWN;
   };
 
-  inline char *GetAudioFileExt (codec i) {
+  inline const char *GetAudioFileExt (codec i) {
     switch (i) { 
       case VORBIS: return ".ogg"; 
       case WAV: return ".wav"; 

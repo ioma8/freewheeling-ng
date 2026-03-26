@@ -122,7 +122,7 @@ public:
 
   // Draw text, and optionally return size of text drawn in sx and sy
   static int draw_text(SDL_Surface *out, TTF_Font *font,
-                       char *str, int x, int y, SDL_Color clr, char centerx = 0,
+                       const char *str, int x, int y, SDL_Color clr, char centerx = 0,
                        char centery = 0, int *sx = 0, int *sy = 0);
 
   // If no suitable map exists in list 'cmaps', creates a planar>circular map

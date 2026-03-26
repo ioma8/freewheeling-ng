@@ -111,7 +111,7 @@ class Saveable {
   inline void SetSaveStatus(SaveStatus s) { savestatus = s; };
   inline void ClearSaveHash() { memset(savehash,0,sizeof(unsigned char) * SAVEABLE_HASH_LENGTH); };
   inline int SetSaveableHashFromText(char *stext) {
-    int slen = strlen(stext);
+    size_t slen = strlen(stext);
     if (slen != SAVEABLE_HASH_LENGTH*2) {
       printf("DISK: Invalid MD5 hash '%s'\n",stext);
       return 1;
@@ -169,9 +169,9 @@ class Saveable {
   // Gets the first two characters of the hash in the given filename,
   // given the base length-- store in *c1 and *c2-- only if the
   // filename contains a valid hash
-  inline static void GetHashFirst(char *filename, int baselen, 
+  inline static void GetHashFirst(const char *filename, int baselen, 
                                   char *c1, char *c2) {
-    char *c = filename + baselen + 1;
+    const char *c = filename + baselen + 1;
     if (c < filename+strlen(filename)) {
       *c1 = *c++;
       *c2 = *c;
@@ -575,7 +575,7 @@ class LoopBrowserItem : public BrowserItem {
 
   virtual int Compare(BrowserItem *second) { 
     if (second->GetType() == B_Loop)
-      return ((LoopBrowserItem *) second)->time-(signed int) time;
+      return (int) (((LoopBrowserItem *) second)->time - time);
     else
       return 0;
   };
@@ -609,7 +609,7 @@ class SceneBrowserItem : public BrowserItem {
 
   virtual int Compare(BrowserItem *second) { 
     if (second->GetType() == B_Scene)
-      return ((SceneBrowserItem *) second)->time - (signed int) time;
+      return (int) (((SceneBrowserItem *) second)->time - time);
     else 
       return 0;
   };
@@ -995,7 +995,7 @@ class Fweelin : public EventProducer, public BrowserCallback {
 
   // Returns stats about output streams-
   // The type (file extension .ogg, etc), The number of output streams open, the total number of megabytes written (Return value).
-  float getSTREAMSTATS(char *&stream_type, int &num_streams);
+  float getSTREAMSTATS(const char *&stream_type, int &num_streams);
 
   inline SceneBrowserItem *getCURSCENE() { return curscene; };
   inline void setCURSCENE(SceneBrowserItem *nw) { curscene = nw; };

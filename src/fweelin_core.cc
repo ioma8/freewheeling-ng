@@ -53,6 +53,34 @@
 const float Loop::MIN_VOL = 0.01;
 PreallocatedType *Loop::loop_pretype = 0;
 
+namespace {
+
+UserVariable *AddIntConst(FloConfig *cfg, const char *name, int value) {
+  UserVariable *var = cfg->AddEmptyVariable((char *) name);
+  var->type = T_int;
+  *var = value;
+  return var;
+}
+
+void AddEmptyVariables(FloConfig *cfg, const char *const *names, int count) {
+  for (int i = 0; i < count; i++)
+    cfg->AddEmptyVariable((char *) names[i]);
+}
+
+struct SystemVarLink {
+  const char *name;
+  CoreDataType type;
+  char *ptr;
+};
+
+void LinkSystemVars(FloConfig *cfg, const SystemVarLink *links, int count) {
+  for (int i = 0; i < count; i++)
+    cfg->LinkSystemVariable((char *) links[i].name, links[i].type,
+                            links[i].ptr);
+}
+
+}
+
 // *********** CORE
 
 Snapshot *Fweelin::getSNAP (int idx) {
@@ -207,12 +235,16 @@ void Saveable::RenameSaveable(char **filename_ptr, int baselen,
     *filename_ptr = new char[strlen(fn_base)+1+
                              strlen(fn_hash)+1+
                              strlen(newname)+1];
-    if (strlen(newname) > 0) 
-      sprintf(*filename_ptr,"%s-%s-%s",
-              fn_base,fn_hash,newname);
+    if (strlen(newname) > 0)
+      snprintf(*filename_ptr,
+               strlen(fn_base)+1+strlen(fn_hash)+1+strlen(newname)+1,
+               "%s-%s-%s",
+               fn_base,fn_hash,newname);
     else
-      sprintf(*filename_ptr,"%s-%s",
-              fn_base,fn_hash);
+      snprintf(*filename_ptr,
+               strlen(fn_base)+1+strlen(fn_hash)+1,
+               "%s-%s",
+               fn_base,fn_hash);
 
     unsigned int tmp_a_size = FWEELIN_OUTNAME_LEN + 10;
     unsigned int tmp_b_size = FWEELIN_OUTNAME_LEN;
@@ -469,7 +501,7 @@ void LoopManager::ItemRenamed(BrowserItem *item) {
 
       // Add all audio format names + XML to extension list
       int numexts = END_OF_FORMATS + 1;
-      char *exts[numexts];
+      const char *exts[numexts];
       for (codec c = FIRST_FORMAT; c < END_OF_FORMATS; c = (codec) (c+1))
         exts[c] = app->getCFG()->GetAudioFileExt(c);
       exts[END_OF_FORMATS] = FWEELIN_OUTPUT_DATA_EXT;
@@ -1000,8 +1032,6 @@ void TriggerMap::GoSave(char *filename) {
           bCnt++;
       } while (go && bCnt % 256) ;
       
-      unsigned int buf_size = (FWEELIN_OUTNAME_LEN * 2) + 20;
-      char buf[buf_size];
       printf("INIT: Backup existing scene.\n");
       if (rename(tmp, tmp2) != 0) {
         printf("INIT: Error %d moving '%s' to '%s'.\n",errno,tmp,tmp2);
@@ -3414,7 +3444,7 @@ long int Fweelin::getSTREAMSIZE(FileStreamer *fs, char &frames) {
   }
 }
 
-float Fweelin::getSTREAMSTATS(char *&stream_type, int &num_streams) {
+float Fweelin::getSTREAMSTATS(const char *&stream_type, int &num_streams) {
   stream_type = cfg->GetAudioFileExt(cfg->GetStreamOutFormat());
   num_streams = 0;
   char frames;
@@ -3509,42 +3539,36 @@ int Fweelin::setup()
   cfg = new FloConfig(this);
 
   // Create system variables so that config will have them first!
-  UserVariable *tmpv;
-  tmpv = cfg->AddEmptyVariable("BROWSE_loop");
-  tmpv->type = T_int;
-  *tmpv = (int) B_Loop;
-  tmpv = cfg->AddEmptyVariable("BROWSE_scene");
-  tmpv->type = T_int;
-  *tmpv = (int) B_Scene;
-  tmpv = cfg->AddEmptyVariable("BROWSE_loop_tray");
-  tmpv->type = T_int;
-  *tmpv = (int) B_Loop_Tray;
-  tmpv = cfg->AddEmptyVariable("BROWSE_scene_tray");
-  tmpv->type = T_int;
-  *tmpv = (int) B_Scene_Tray;
-  tmpv = cfg->AddEmptyVariable("BROWSE_patch");
-  tmpv->type = T_int;
-  *tmpv = (int) B_Patch;
-  cfg->AddEmptyVariable("SYSTEM_midi_transpose");
-  cfg->AddEmptyVariable("SYSTEM_master_in_volume");
-  cfg->AddEmptyVariable("SYSTEM_master_out_volume");
-  cfg->AddEmptyVariable("SYSTEM_cur_pitchbend");
-  cfg->AddEmptyVariable("SYSTEM_bender_tune");
-  cfg->AddEmptyVariable("SYSTEM_cur_limiter_gain");
-  cfg->AddEmptyVariable("SYSTEM_audio_cpu_load");
-  cfg->AddEmptyVariable("SYSTEM_sync_active");
-  cfg->AddEmptyVariable("SYSTEM_sync_transmit");
-  cfg->AddEmptyVariable("SYSTEM_midisync_transmit");
-  cfg->AddEmptyVariable("SYSTEM_fluidsynth_enabled");
-  cfg->AddEmptyVariable("SYSTEM_num_midi_outs");
-  cfg->AddEmptyVariable("SYSTEM_num_help_pages");
-  cfg->AddEmptyVariable("SYSTEM_num_loops_in_map");
-  cfg->AddEmptyVariable("SYSTEM_num_recording_loops_in_map");
-  cfg->AddEmptyVariable("SYSTEM_num_patchbanks");
-  cfg->AddEmptyVariable("SYSTEM_cur_patchbank_tag");
-  cfg->AddEmptyVariable("SYSTEM_num_switchable_interfaces");
-  cfg->AddEmptyVariable("SYSTEM_cur_switchable_interface");
-  cfg->AddEmptyVariable("SYSTEM_snapshot_page_firstidx");
+  AddIntConst(cfg, "BROWSE_loop", (int) B_Loop);
+  AddIntConst(cfg, "BROWSE_scene", (int) B_Scene);
+  AddIntConst(cfg, "BROWSE_loop_tray", (int) B_Loop_Tray);
+  AddIntConst(cfg, "BROWSE_scene_tray", (int) B_Scene_Tray);
+  AddIntConst(cfg, "BROWSE_patch", (int) B_Patch);
+  {
+    const char *const system_vars[] = {
+      "SYSTEM_midi_transpose",
+      "SYSTEM_master_in_volume",
+      "SYSTEM_master_out_volume",
+      "SYSTEM_cur_pitchbend",
+      "SYSTEM_bender_tune",
+      "SYSTEM_cur_limiter_gain",
+      "SYSTEM_audio_cpu_load",
+      "SYSTEM_sync_active",
+      "SYSTEM_sync_transmit",
+      "SYSTEM_midisync_transmit",
+      "SYSTEM_fluidsynth_enabled",
+      "SYSTEM_num_midi_outs",
+      "SYSTEM_num_help_pages",
+      "SYSTEM_num_loops_in_map",
+      "SYSTEM_num_recording_loops_in_map",
+      "SYSTEM_num_patchbanks",
+      "SYSTEM_cur_patchbank_tag",
+      "SYSTEM_num_switchable_interfaces",
+      "SYSTEM_cur_switchable_interface",
+      "SYSTEM_snapshot_page_firstidx"
+    };
+    AddEmptyVariables(cfg, system_vars, sizeof(system_vars) / sizeof(system_vars[0]));
+  }
   for (int i = 0; i < 4; i++) {
     char tmp2[255];
     snprintf(tmp2, 255, "SYSTEM_in_%d_volume", i + 1);
@@ -3555,7 +3579,7 @@ int Fweelin::setup()
     cfg->AddEmptyVariable(tmp2);
   }
   for (int i = 0; i < LAST_REC_COUNT; i++) {
-    sprintf(tmp,"SYSTEM_loopid_lastrecord_%d",i);
+    snprintf(tmp,sizeof(tmp),"SYSTEM_loopid_lastrecord_%d",i);
     cfg->AddEmptyVariable(tmp);
   }
 
@@ -3648,8 +3672,8 @@ int Fweelin::setup()
   streamoutname_display = "";
   curscene = 0;
 #if 0
-  strcpy(scenedispname,"");
-  strcpy(scenefilename,"");
+  scenedispname[0] = '\0';
+  scenefilename[0] = '\0';
 #endif
 
   // Fixed audio memory
@@ -3751,50 +3775,46 @@ int Fweelin::setup()
 #endif
 
   // Linkup system variables
-  cfg->LinkSystemVariable("SYSTEM_num_midi_outs",T_int,
-                          (char *) &(cfg->midiouts));
-  cfg->LinkSystemVariable("SYSTEM_midi_transpose",T_int,
-                          (char *) &(cfg->transpose));
-  cfg->LinkSystemVariable("SYSTEM_master_in_volume",T_float,
-                          (char *) rp->GetInputVolumePtr());
-  cfg->LinkSystemVariable("SYSTEM_master_out_volume",T_float,
-                          (char *) &(rp->outputvol));
-  cfg->LinkSystemVariable("SYSTEM_cur_pitchbend",T_int,
-                          (char *) &(midi->curbender));
-  cfg->LinkSystemVariable("SYSTEM_bender_tune",T_int,
-                          (char *) &(midi->bendertune));
-  cfg->LinkSystemVariable("SYSTEM_audio_cpu_load",T_float,
-                          (char *) &(audio->cpuload));
-  cfg->LinkSystemVariable("SYSTEM_sync_active",T_char,
-                          (char *) &(audio->sync_active));
-  cfg->LinkSystemVariable("SYSTEM_sync_transmit",T_char,
-                          (char *) &(audio->timebase_master));
-  cfg->LinkSystemVariable("SYSTEM_midisync_transmit",T_char,
-                          (char *) &(midi->midisyncxmit));
+  {
+    SystemVarLink system_links[] = {
+      {"SYSTEM_num_midi_outs", T_int, (char *) &(cfg->midiouts)},
+      {"SYSTEM_midi_transpose", T_int, (char *) &(cfg->transpose)},
+      {"SYSTEM_master_in_volume", T_float, (char *) rp->GetInputVolumePtr()},
+      {"SYSTEM_master_out_volume", T_float, (char *) &(rp->outputvol)},
+      {"SYSTEM_cur_pitchbend", T_int, (char *) &(midi->curbender)},
+      {"SYSTEM_bender_tune", T_int, (char *) &(midi->bendertune)},
+      {"SYSTEM_audio_cpu_load", T_float, (char *) &(audio->cpuload)},
+      {"SYSTEM_sync_active", T_char, (char *) &(audio->sync_active)},
+      {"SYSTEM_sync_transmit", T_char, (char *) &(audio->timebase_master)},
+      {"SYSTEM_midisync_transmit", T_char, (char *) &(midi->midisyncxmit)},
 #if USE_FLUIDSYNTH
-  cfg->LinkSystemVariable("SYSTEM_fluidsynth_enabled",T_char,
-                          (char *) &(fluidp->enable));
+      {"SYSTEM_fluidsynth_enabled", T_char, (char *) &(fluidp->enable)},
 #endif
-  cfg->LinkSystemVariable("SYSTEM_num_help_pages",T_int,
-                          (char *) &(vid->numhelppages));
-  cfg->LinkSystemVariable("SYSTEM_num_loops_in_map",T_int,
-                          (char *) &(loopmgr->numloops));
-  cfg->LinkSystemVariable("SYSTEM_num_recording_loops_in_map",T_int,
-                          (char *) &(loopmgr->numrecordingloops));
-  if (browsers[B_Patch] != 0) {
-    cfg->LinkSystemVariable("SYSTEM_num_patchbanks",T_int,
-                          (char *) &(((PatchBrowser *) browsers[B_Patch])->
-                                     num_pb));
-    cfg->LinkSystemVariable("SYSTEM_cur_patchbank_tag",T_int,
-                          (char *) &(((PatchBrowser *) browsers[B_Patch])->
-                                     pb_cur_tag));
+      {"SYSTEM_num_help_pages", T_int, (char *) &(vid->numhelppages)},
+      {"SYSTEM_num_loops_in_map", T_int, (char *) &(loopmgr->numloops)},
+      {"SYSTEM_num_recording_loops_in_map", T_int,
+       (char *) &(loopmgr->numrecordingloops)},
+    };
+    LinkSystemVars(cfg, system_links, sizeof(system_links) / sizeof(system_links[0]));
   }
-  cfg->LinkSystemVariable("SYSTEM_num_switchable_interfaces",T_int,
-                          (char *) &(cfg->numinterfaces));
-  cfg->LinkSystemVariable("SYSTEM_cur_switchable_interface",T_int,
-                          (char *) &(vid->cur_iid));
+  if (browsers[B_Patch] != 0) {
+    SystemVarLink patch_links[] = {
+      {"SYSTEM_num_patchbanks", T_int,
+       (char *) &(((PatchBrowser *) browsers[B_Patch])->num_pb)},
+      {"SYSTEM_cur_patchbank_tag", T_int,
+       (char *) &(((PatchBrowser *) browsers[B_Patch])->pb_cur_tag)},
+    };
+    LinkSystemVars(cfg, patch_links, sizeof(patch_links) / sizeof(patch_links[0]));
+  }
+  {
+    SystemVarLink interface_links[] = {
+      {"SYSTEM_num_switchable_interfaces", T_int, (char *) &(cfg->numinterfaces)},
+      {"SYSTEM_cur_switchable_interface", T_int, (char *) &(vid->cur_iid)},
+    };
+    LinkSystemVars(cfg, interface_links, sizeof(interface_links) / sizeof(interface_links[0]));
+  }
   for (int i = 0; i < LAST_REC_COUNT; i++) {
-    sprintf(tmp,"SYSTEM_loopid_lastrecord_%d",i);
+    snprintf(tmp,sizeof(tmp),"SYSTEM_loopid_lastrecord_%d",i);
     cfg->LinkSystemVariable(tmp,T_int,
                             (char *) &(loopmgr->lastrecidx[i]));
   }

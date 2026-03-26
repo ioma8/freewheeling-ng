@@ -219,7 +219,7 @@ void LoopTray::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
         // Draw text with cursor
         int sx, sy;
         int txty = y+loopsize-xpand_liney;
-        char *curn = renamer->GetCurName();
+        const char *curn = renamer->GetCurName();
         if (*curn != '\0')
           VideoIO::draw_text(screen,font->font,curn,
                              x,txty,white,0,0,&sx,&sy);
@@ -866,7 +866,7 @@ void FloDisplaySnapshots::Draw(SDL_Surface *screen) {
     Snapshot *sn = app->getSNAP(i);
     if (sn != 0) {
       RenameUIVars *rui = 0;
-      char *nm = sn->name;
+      const char *nm = sn->name;
 
       if (renamer != 0 && i == rename_idx) {
         // Use current name from renamer

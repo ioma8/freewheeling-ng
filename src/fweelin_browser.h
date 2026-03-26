@@ -122,7 +122,7 @@ class ItemRenamer : public EventHook {
   // Hook events for typing new names
   virtual char HookEvent(Event *ev, EventProducer */*from*/);
 
-  inline char *GetCurName() { return rename_tmpbuf; };
+  inline const char *GetCurName() { return rename_tmpbuf; };
   inline RenameUIVars *UpdateUIVars() { 
     double t = mygettime();
     if (t-rui.rename_cursor_blinktime >= BLINK_DELAY) {
@@ -137,7 +137,7 @@ class ItemRenamer : public EventHook {
  private:
 
   inline void Rename_Append(char c) {
-    int rblen = strlen(rename_tmpbuf);
+    size_t rblen = strlen(rename_tmpbuf);
     if (rblen+1 < RENAME_BUF_SIZE) {
       rename_tmpbuf[rblen] = c;
       // printf("KEY: %c\n",rename_tmpbuf[rblen]);
@@ -146,7 +146,7 @@ class ItemRenamer : public EventHook {
   };
 
   inline void Rename_Backspace() {
-    int rblen = strlen(rename_tmpbuf);
+    size_t rblen = strlen(rename_tmpbuf);
     if (rblen > 0)
       rename_tmpbuf[rblen-1] = '\0';
   };
@@ -209,7 +209,7 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
   // (filename must refer to a file of the type this browser handles)
   // Write the name to outbuf, with max maxlen characters.
   // Returns nonzero if we used a 'default' name.
-  char GetDisplayName(char *filename, time_t *filetime,
+  char GetDisplayName(const char *filename, time_t *filetime,
                       char *outbuf, int maxlen);
 
   ItemRenamer *renamer; // Renamer instance, or null if we are not renaming
@@ -224,7 +224,7 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
   inline BrowserItemType GetType() { return btype; };
   virtual FloDisplayType GetFloDisplayType() { return FD_Browser; };
 
-  inline static char *GetTypeName(BrowserItemType b) {
+  inline static const char *GetTypeName(BrowserItemType b) {
     switch (b) {
     case B_Scene_Tray :
       return "Scene Tray";

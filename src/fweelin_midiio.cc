@@ -90,14 +90,14 @@ char MidiIO::open_midi (int num_in, int num_out) {
   out_sources = new MIDIEndpointRef[num_out];
   
   for (l1 = 0; l1 < num_in; l1++) {
-    sprintf(portname, MIDI_CLIENT_NAME " IN %d", l1+1);
+    snprintf(portname, sizeof(portname), MIDI_CLIENT_NAME " IN %d", l1+1);
     if (MIDIInputPortCreate(client, CFStringCreateWithCString(0,portname,kCFStringEncodingUTF8), MidiInputProc, this, &in_ports[l1]) != noErr) {
       fprintf(stderr, "MIDI: Error creating MIDI port.\n");
       return -1;
     }
   }
   for (l1 = 0; l1 < num_out; l1++) {
-    sprintf(portname, MIDI_CLIENT_NAME " OUT %d", l1+1);
+    snprintf(portname, sizeof(portname), MIDI_CLIENT_NAME " OUT %d", l1+1);
     if (MIDIOutputPortCreate(client, CFStringCreateWithCString(0,portname,kCFStringEncodingUTF8), &out_ports[l1]) != noErr) {   
       fprintf(stderr, "MIDI: Error creating MIDI port.\n");
       return -1;
@@ -156,7 +156,7 @@ char MidiIO::open_midi (int num_in, int num_out) {
   // Create virtual sources
   char sourcename[64];
   for (int i = 0; i < num_out; i++) {
-    sprintf(sourcename, MIDI_CLIENT_NAME " OUT %d", i+1);
+    snprintf(sourcename, sizeof(sourcename), MIDI_CLIENT_NAME " OUT %d", i+1);
     if (MIDISourceCreate(client,CFStringCreateWithCString(0,sourcename,kCFStringEncodingUTF8),
                          &out_sources[i]) != noErr) {
       fprintf(stderr, "MIDI: Error creating virtual MIDI source.\n");
@@ -369,7 +369,7 @@ char MidiIO::open_midi (int num_in, int num_out) {
   }
   snd_seq_set_client_name(seq_handle, MIDI_CLIENT_NAME);
   for (l1 = 0; l1 < num_in; l1++) {
-    sprintf(portname, MIDI_CLIENT_NAME " IN %d", l1+1);
+    snprintf(portname, sizeof(portname), MIDI_CLIENT_NAME " IN %d", l1+1);
     if ((in_ports[l1] = snd_seq_create_simple_port(seq_handle, portname,
                                                    SND_SEQ_PORT_CAP_WRITE|SND_SEQ_PORT_CAP_SUBS_WRITE,
                                                    SND_SEQ_PORT_TYPE_APPLICATION)) < 0) {
@@ -378,7 +378,7 @@ char MidiIO::open_midi (int num_in, int num_out) {
     }
   }
   for (l1 = 0; l1 < num_out; l1++) {
-    sprintf(portname, MIDI_CLIENT_NAME " OUT %d", l1+1);
+    snprintf(portname, sizeof(portname), MIDI_CLIENT_NAME " OUT %d", l1+1);
     if ((out_ports[l1] = snd_seq_create_simple_port(seq_handle, portname,
                                                     SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ,
                                                     SND_SEQ_PORT_TYPE_APPLICATION)) < 0) {

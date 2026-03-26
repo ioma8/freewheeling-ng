@@ -291,11 +291,11 @@ void Browser::ItemRenamedOnDisk(char *old_filename, char *new_filename,
 // (filename must refer to a file of the type this browser handles)
 // Write the name to outbuf, with max maxlen characters.
 // Returns nonzero if we used a 'default' name.
-char Browser::GetDisplayName(char *filename, 
+char Browser::GetDisplayName(const char *filename, 
                              time_t *filetime,
                              char *outbuf, int maxlen) {
   // Loop exists, use combination of time and hash as name
-  int baselen = strlen(app->getCFG()->GetLibraryPath()) + 1;
+  size_t baselen = strlen(app->getCFG()->GetLibraryPath()) + 1;
   if (btype == B_Loop)
     baselen += strlen(FWEELIN_OUTPUT_LOOP_NAME);
   else if (btype == B_Scene) 
@@ -310,7 +310,7 @@ char Browser::GetDisplayName(char *filename,
     sf_hash[FWEELIN_OUTNAME_LEN],
     sf_objname[FWEELIN_OUTNAME_LEN];
 
-  if (Saveable::SplitFilename(filename, baselen, sf_basename, sf_hash, 
+  if (Saveable::SplitFilename(filename, (int) baselen, sf_basename, sf_hash, 
                               sf_objname,FWEELIN_OUTNAME_LEN) || 
       strlen(sf_objname) == 0) {
     // No object name given in filename
@@ -1115,5 +1115,4 @@ void FloDisplaySnapshots::ItemRenamed(char *nw) {
     renamer = 0;
   }
 };
-
 
