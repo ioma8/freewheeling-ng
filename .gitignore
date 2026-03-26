@@ -2,6 +2,7 @@ Makefile
 autom4te.cache/
 config.log
 config.status
+MacOSX/build/
 data/Makefile
 src/Makefile
 src/*.o
