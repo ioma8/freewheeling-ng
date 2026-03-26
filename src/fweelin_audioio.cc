@@ -447,9 +447,6 @@ int AudioIO::open() {
 
   capture[0] = (sample_t *) calloc(capture_frames, sizeof(sample_t));
   capture[1] = (sample_t *) calloc(capture_frames, sizeof(sample_t));
-  silence[0] = (sample_t *) calloc(capture_frames, sizeof(sample_t));
-  silence[1] = (sample_t *) calloc(capture_frames, sizeof(sample_t));
-
   size_t abl_size = sizeof(AudioBufferList) + sizeof(AudioBuffer);
   capture_abl = (AudioBufferList *) calloc(1, abl_size);
   configure_audio_buffer_list(capture_abl, capture[0], capture[1], capture_frames);
@@ -474,6 +471,7 @@ int AudioIO::activate(Processor *rp) {
   }
   if (AudioOutputUnitStart(unit) != noErr) {
     fprintf(stderr, "AUDIO: cannot start audio unit\n");
+    AudioOutputUnitStop(input_unit);
     return 1;
   }
 
@@ -512,8 +510,6 @@ void AudioIO::close() {
 
   free(capture[0]);
   free(capture[1]);
-  free(silence[0]);
-  free(silence[1]);
   free(capture_abl);
 
   printf("AUDIO: end\n");

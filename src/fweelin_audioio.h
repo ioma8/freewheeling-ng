@@ -153,7 +153,6 @@ public:
   AudioUnit unit;
   sample_t **iport[2], **oport[2];
   sample_t *capture[2];
-  sample_t *silence[2];
   AudioBufferList *capture_abl;
   nframes_t capture_frames;
   nframes_t bufsize;

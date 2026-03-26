@@ -3781,8 +3781,6 @@ int Fweelin::setup()
                           (char *) &(loopmgr->numloops));
   cfg->LinkSystemVariable("SYSTEM_num_recording_loops_in_map",T_int,
                           (char *) &(loopmgr->numrecordingloops));
-  cfg->LinkSystemVariable("SYSTEM_num_recording_loops_in_map",T_int,
-                          (char *) &(loopmgr->numrecordingloops));
   if (browsers[B_Patch] != 0) {
     cfg->LinkSystemVariable("SYSTEM_num_patchbanks",T_int,
                           (char *) &(((PatchBrowser *) browsers[B_Patch])->

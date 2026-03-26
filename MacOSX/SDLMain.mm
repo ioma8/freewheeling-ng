@@ -10,7 +10,6 @@
 #include "FweelinMac.h"
 
 #import <AVFoundation/AVFoundation.h>
-#import <dispatch/dispatch.h>
 #import <sys/param.h> /* for MAXPATHLEN */
 #import <unistd.h>
 
@@ -266,15 +265,10 @@ static void requestMicrophoneAccessIfNeeded(void)
         return;
     }
 
-    dispatch_semaphore_t sem = dispatch_semaphore_create(0);
-    __block BOOL granted = NO;
     [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL ok) {
-        granted = ok;
-        dispatch_semaphore_signal(sem);
+        if (!ok)
+            NSLog(@"Microphone access was not granted.");
     }];
-    dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
-    if (!granted)
-        NSLog(@"Microphone access was not granted.");
 }
 
 /* Replacement for NSApplicationMain */
