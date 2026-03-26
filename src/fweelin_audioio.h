@@ -24,7 +24,7 @@ extern "C" {
 #include <AudioUnit/AudioUnit.h>
 }
 
-#include <sys/time.h>
+#include <mach/mach_time.h>
 
 typedef float sample_t;
 typedef UInt32 nframes_t;
@@ -67,7 +67,10 @@ public:
     : sync_start_frame(0), timebase_master(0), sync_active(0),
       audio_thread(0), audio_thread_2(0),
       cpuload_sample_count(0), cpuload_sample_frames(0),
-      app(app) {}
+      cpuload_start_ticks(0),
+      app(app) {
+    mach_timebase_info(&cpuload_timebase);
+  }
 
   // Open up system level audio
   int open ();
@@ -187,7 +190,8 @@ public:
 
   unsigned int cpuload_sample_count;
   nframes_t cpuload_sample_frames;
-  struct timeval cpuload_start_tv;
+  uint64_t cpuload_start_ticks;
+  mach_timebase_info_data_t cpuload_timebase;
 
   // Pointer to the main app
   Fweelin *app;

@@ -1003,9 +1003,9 @@ void TriggerMap::GoSave(char *filename) {
       unsigned int buf_size = (FWEELIN_OUTNAME_LEN * 2) + 20;
       char buf[buf_size];
       printf("INIT: Backup existing scene.\n");
-      snprintf(buf,buf_size,"mv \"%s\" \"%s\"",tmp,tmp2);
-      printf("INIT: Executing: %s\n",buf);
-      system(buf);      
+      if (rename(tmp, tmp2) != 0) {
+        printf("INIT: Error %d moving '%s' to '%s'.\n",errno,tmp,tmp2);
+      }
     }
   }
   

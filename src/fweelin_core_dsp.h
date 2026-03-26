@@ -61,8 +61,10 @@ class AudioLevel {
 // a processor-- allowing for multiple ins and outs to be passed
 class AudioBuffers {
  public:
-  AudioBuffers(Fweelin *app);
+  AudioBuffers(Fweelin *app, const AudioBuffers *input_source = 0);
   ~AudioBuffers();
+  AudioBuffers(const AudioBuffers &) = delete;
+  AudioBuffers &operator=(const AudioBuffers &) = delete;
 
   // Get input #n, left/mono (0) or right (1) channel
   inline sample_t *GetInput(int n, short channel) { return ins[channel][n]; };
@@ -72,7 +74,6 @@ class AudioBuffers {
   // Get # of inputs/ouputs
   inline int GetNumInputs() { return numins; };
   inline int GetNumOutputs() { return numouts; };
-  void ShareInputsFrom(AudioBuffers *src);
 
   // Is input/output #n stereo?
   char IsStereoInput(int n);
@@ -103,8 +104,8 @@ class AudioBuffers {
     numouts;         // & outs
   sample_t **ins[2], // 2 lists of input sample buffers (mono/left and right)
     **outs[2];       // & 2 lists of output sample buffers (mono/left and right)
-  char owns_ins[2];
-  char owns_outs[2];
+  bool owns_ins[2];
+  bool owns_outs[2];
 };
 
 // Settings for each input coming into FreeWheeling
@@ -153,7 +154,7 @@ class InputSettings {
 
   // (de)Select input
   inline void SelectInput(int n, char selected) {
-    if (n >= 0 || n < numins) {
+    if (HasInput(n)) {
       selins[n] = selected;
     } else {
       printf("CORE: InputSettings- input number %d not in range.\n",n);
@@ -161,7 +162,7 @@ class InputSettings {
   };
   // Is input n selected?
   inline char InputSelected(int n) {
-    if (n >= 0 || n < numins) {
+    if (HasInput(n)) {
       return selins[n];
     } else {
       printf("CORE: InputSettings- input number %d not in range.\n",n);
@@ -176,7 +177,7 @@ class InputSettings {
   void AdjustInputVol(int n, float adjust); 
   void SetInputVol(int n, float vol, float logvol);
   inline float GetInputVol(int n) {
-    if (n >= 0 || n < numins) {
+    if (HasInput(n)) {
       return invols[n];
     } else {
       printf("CORE: InputSettings- input number %d not in range.\n",n);
@@ -215,6 +216,11 @@ class InputSettings {
   sample_t *insums[2], *insavg[2], *inpeak;
   nframes_t *inpeaktime;
   int *inscnt;
+
+ private:
+  inline char HasInput(int n) const {
+    return (n >= 0 && n < numins);
+  }
 };
 
 enum SyncStateType {

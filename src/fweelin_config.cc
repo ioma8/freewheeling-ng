@@ -72,6 +72,47 @@ const int FloConfig::NUM_PREALLOCATED_TIME_MARKERS = 40;
 const float FloConfig::AUDIO_MEMORY_LEN = 10.0;
 const int FloConfig::CFG_PATH_MAX = 2048;
 
+namespace {
+static void BuildConfigPath(char *dst, size_t dst_size, const char *dir,
+                            const char *name) {
+  snprintf(dst, dst_size, "%s/%s", dir, name);
+}
+
+static int CopyFileContents(const char *src, const char *dst) {
+  FILE *in = fopen(src, "rb");
+  if (in == 0) {
+    printf("INIT: Error %d opening '%s' for read.\n", errno, src);
+    return -1;
+  }
+
+  FILE *out = fopen(dst, "wb");
+  if (out == 0) {
+    printf("INIT: Error %d opening '%s' for write.\n", errno, dst);
+    fclose(in);
+    return -1;
+  }
+
+  char chunk[4096];
+  size_t nread = 0;
+  int ret = 0;
+  while ((nread = fread(chunk, 1, sizeof(chunk), in)) > 0) {
+    if (fwrite(chunk, 1, nread, out) != nread) {
+      printf("INIT: Error %d copying '%s' to '%s'.\n", errno, src, dst);
+      ret = -1;
+      break;
+    }
+  }
+  if (ferror(in)) {
+    printf("INIT: Error %d reading '%s'.\n", errno, src);
+    ret = -1;
+  }
+
+  fclose(out);
+  fclose(in);
+  return ret;
+}
+}
+
 
 // Copies configuration file 'cfgname' from shared to ~/.fweelin
 // If copyall is set, copies *all* .XML files from shared to ~/.fweelin
@@ -83,8 +124,7 @@ void FloConfig::CopyConfigFile (char *cfgname, char copyall) {
   if (copyall) {
     // Copy all .xml files in shared:
     glob_t globbuf;
-    snprintf(buf,CFG_PATH_MAX,"%s/*%s",
-             FWEELIN_DATADIR,FWEELIN_CONFIG_EXT);
+    snprintf(buf,CFG_PATH_MAX,"%s/*%s",FWEELIN_DATADIR,FWEELIN_CONFIG_EXT);
     printf("INIT: Copying all config files from shared folder...\n");
     if (glob(buf, 0, NULL, &globbuf) == 0) {
       for (size_t i = 0; i < globbuf.gl_pathc; i++) {
@@ -100,14 +140,15 @@ void FloConfig::CopyConfigFile (char *cfgname, char copyall) {
   } else {
     // Config file exists? (need to backup?)
     char src[CFG_PATH_MAX];
-    snprintf(src,CFG_PATH_MAX,"%s/%s",FWEELIN_DATADIR,cfgname);
+    BuildConfigPath(src, CFG_PATH_MAX, FWEELIN_DATADIR, cfgname);
     struct stat srcst;
     if (stat(src,&srcst) != 0) {
       return;
     }
 
-    snprintf(buf,CFG_PATH_MAX,"%s/%s/%s",homedir,
-             FWEELIN_CONFIG_DIR,cfgname);
+    char config_dir[CFG_PATH_MAX];
+    BuildConfigPath(config_dir, CFG_PATH_MAX, homedir, FWEELIN_CONFIG_DIR);
+    BuildConfigPath(buf, CFG_PATH_MAX, config_dir, cfgname);
     struct stat st;
     if (stat(buf,&st) == 0) {
       // Find backup name
@@ -125,19 +166,11 @@ void FloConfig::CopyConfigFile (char *cfgname, char copyall) {
 
       // Backup
       printf("Backing up your old configuration to: %s\n",tmp2);
-      unsigned int tmp3_size = (CFG_PATH_MAX * 2) + 20;
-      char tmp3[tmp3_size];
-      snprintf(tmp3,tmp3_size,"cp \"%s\" \"%s\"",buf,tmp2);
-      printf("INIT: Copying: %s\n",tmp3);
-      system(tmp3);
+      CopyFileContents(buf, tmp2);
     }
 
     // Copy over from shared
-    char buf2[CFG_PATH_MAX*2];
-    snprintf(buf2,CFG_PATH_MAX*2,"cp \"%s/%s\" \"%s/%s\"",
-             FWEELIN_DATADIR,cfgname,
-             homedir,FWEELIN_CONFIG_DIR);
-    system(buf2);
+    CopyFileContents(src, buf);
   }
 };
 
@@ -148,8 +181,9 @@ char *FloConfig::PrepareLoadConfigFile (char *cfgname, char basecfg, char quiet)
   // Look for config file
   char go = 1;
   do {
-    snprintf(buf,CFG_PATH_MAX,"%s/%s/%s",homedir,
-             FWEELIN_CONFIG_DIR,cfgname);
+    char config_dir[CFG_PATH_MAX];
+    BuildConfigPath(config_dir, CFG_PATH_MAX, homedir, FWEELIN_CONFIG_DIR);
+    BuildConfigPath(buf, CFG_PATH_MAX, config_dir, cfgname);
     struct stat st;
     if (stat(buf,&st) != 0) {
       if (go == 2) {
@@ -166,17 +200,17 @@ char *FloConfig::PrepareLoadConfigFile (char *cfgname, char basecfg, char quiet)
                  "Checking.\n",buf);
         
         // Check if config dir exists?
-        snprintf(buf,CFG_PATH_MAX,"%s/%s",homedir,FWEELIN_CONFIG_DIR);
-        if (mkdir(buf,S_IRWXU)) {
+        BuildConfigPath(config_dir, CFG_PATH_MAX, homedir, FWEELIN_CONFIG_DIR);
+        if (mkdir(config_dir,S_IRWXU)) {
           if (errno != EEXIST) {
             if (!quiet)
               printf("INIT: Error %d creating config folder '%s'- "
                      "do you have write permission there?\n",
-                     errno,buf);
+                     errno,config_dir);
           }
         } else {
           if (!quiet) {
-            printf("INIT: *** Created new config folder '%s'.\n",buf);
+            printf("INIT: *** Created new config folder '%s'.\n",config_dir);
             printf("INIT: Copying static files from shared folder...\n");
           }
 
@@ -3790,39 +3824,31 @@ void FloConfig::Parse() {
   }
 };
 
-void FloConfig::StartInterfaces () {
-  for (int iid = NS_INTERFACE_START_ID; 
-       iid < NS_INTERFACE_START_ID+numnsinterfaces; iid++) {
+namespace {
+void StartInterfaceRange(FloConfig *cfg, int first, int last, const char *label) {
+  for (int iid = first; iid <= last; iid++) {
     Event *proto = Event::GetEventByType(T_EV_StartInterface,1);
     if (proto == 0) {
       printf("GO: Can't get start interface event prototype!\n");
-    } else {
-      StartInterfaceEvent *cpy = (StartInterfaceEvent *) 
-        proto->RTNewWithWait();
-      if (cpy == 0)
-        printf("CONFIG: WARNING: Can't send event- RTNew() failed\n");
-      else { 
-        printf("CONFIG: Start non-switchable interface %d\n",iid);
-        cpy->interfaceid = iid;
-        im.app->getEMG()->BroadcastEventNow(cpy, &im);
-      }
+      continue;
     }
-  }
 
-  for (int iid = 1; iid <= numinterfaces; iid++) {
-    Event *proto = Event::GetEventByType(T_EV_StartInterface,1);
-    if (proto == 0) {
-      printf("GO: Can't get start interface event prototype!\n");
-    } else {
-      StartInterfaceEvent *cpy = (StartInterfaceEvent *) 
-        proto->RTNewWithWait();
-      if (cpy == 0)
-        printf("CONFIG: WARNING: Can't send event- RTNew() failed\n");
-      else { 
-        printf("CONFIG: Start switchable interface %d\n",iid);
-        cpy->interfaceid = iid;
-        im.app->getEMG()->BroadcastEventNow(cpy, &im);
-      }
+    StartInterfaceEvent *cpy = (StartInterfaceEvent *) proto->RTNewWithWait();
+    if (cpy == 0) {
+      printf("CONFIG: WARNING: Can't send event- RTNew() failed\n");
+      continue;
     }
+
+    printf("CONFIG: Start %s interface %d\n",label,iid);
+    cpy->interfaceid = iid;
+    cfg->im.app->getEMG()->BroadcastEventNow(cpy, &cfg->im);
   }
+}
+}
+
+void FloConfig::StartInterfaces () {
+  StartInterfaceRange(this, NS_INTERFACE_START_ID,
+                      NS_INTERFACE_START_ID + numnsinterfaces - 1,
+                      "non-switchable");
+  StartInterfaceRange(this, 1, numinterfaces, "switchable");
 };

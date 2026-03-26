@@ -150,19 +150,27 @@ float AudioLevel::dB_to_fader (float dB, float maxDb)
 
 // *********** CORE SIGNAL PROCESSING
 
-AudioBuffers::AudioBuffers(Fweelin *app) : app(app) {
-  numins_ext = app->getCFG()->GetExtAudioIns();
-  numins = numins_ext + GetIntAudioIns();
+AudioBuffers::AudioBuffers(Fweelin *app, const AudioBuffers *input_source) : app(app) {
+  if (input_source != 0) {
+    numins_ext = input_source->numins_ext;
+    numins = input_source->numins;
+    ins[0] = input_source->ins[0];
+    ins[1] = input_source->ins[1];
+    owns_ins[0] = owns_ins[1] = 0;
+  } else {
+    numins_ext = app->getCFG()->GetExtAudioIns();
+    numins = numins_ext + GetIntAudioIns();
+    ins[0] = new sample_t *[numins];
+    ins[1] = new sample_t *[numins];
+    owns_ins[0] = owns_ins[1] = 1;
+    memset(ins[0],0,sizeof(sample_t *) * numins);
+    memset(ins[1],0,sizeof(sample_t *) * numins);
+  }
+
   numouts = GetAudioOuts();
-  
-  ins[0] = new sample_t *[numins];
-  ins[1] = new sample_t *[numins];
   outs[0] = new sample_t *[numouts];
   outs[1] = new sample_t *[numouts];
-  owns_ins[0] = owns_ins[1] = 1;
   owns_outs[0] = owns_outs[1] = 1;
-  memset(ins[0],0,sizeof(sample_t *) * numins);
-  memset(ins[1],0,sizeof(sample_t *) * numins);
   memset(outs[0],0,sizeof(sample_t *) * numouts);
   memset(outs[1],0,sizeof(sample_t *) * numouts);
 };
@@ -177,19 +185,6 @@ AudioBuffers::~AudioBuffers() {
   if (owns_outs[1])
     delete[] outs[1];
 };
-
-void AudioBuffers::ShareInputsFrom(AudioBuffers *src) {
-  if (owns_ins[0]) {
-    delete[] ins[0];
-    owns_ins[0] = 0;
-  }
-  if (owns_ins[1]) {
-    delete[] ins[1];
-    owns_ins[1] = 0;
-  }
-  ins[0] = src->ins[0];
-  ins[1] = src->ins[1];
-}
 
 char AudioBuffers::IsStereoInput(int n) {
   return app->getCFG()->IsStereoInput(n);
@@ -322,7 +317,7 @@ char InputSettings::IsSelectedStereo() {
 };
 
 void InputSettings::AdjustInputVol(int n, float adjust) {
-  if (n >= 0 || n < numins) {
+  if (HasInput(n)) {
     if (dinvols[n] < MAX_DVOL)
       dinvols[n] += adjust*app->getAUDIO()->GetTimeScale();
     if (dinvols[n] < 0.0)
@@ -877,13 +872,11 @@ RootProcessor::RootProcessor(Fweelin *app, InputSettings *iset) :
   inputvol(1.0), dinputvol(1.0), 
   firstchild(0), samplecnt(0) {
   // Temporary buffers and routing
-  abtmp = new AudioBuffers(app);
+  abtmp = new AudioBuffers(app, app->getABUFS());
   // abtmp2 = new AudioBuffers(app); // Second chain temp
 
   // Pre needs a separate set because preprocess runs in a different thread
-  preabtmp = new AudioBuffers(app); 
-  abtmp->ShareInputsFrom(app->getABUFS());
-  preabtmp->ShareInputsFrom(app->getABUFS());
+  preabtmp = new AudioBuffers(app, app->getABUFS()); 
   buf[0] = new sample_t[app->getBUFSZ()];
   // buf2[0] = new sample_t[app->getBUFSZ()];
   prebuf[0] = new sample_t[prelen];
@@ -1135,6 +1128,13 @@ void RootProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
   if (len > fragmentsize) 
     len = fragmentsize;
 
+  // Zero the main output buffers once per block before any processors mix in.
+  sample_t *out[2] = {ab->outs[0][0], ab->outs[1][0]};
+  int stereo = (out[1] != 0 ? 1 : 0);
+  memset(out[0],0,sizeof(sample_t)*len);
+  if (stereo)
+    memset(out[1],0,sizeof(sample_t)*len);
+
   if (pre)
     // Do not allow processor list modification by RT thread when non-RT preprocess is engaged
     protect_plist++;
@@ -1184,13 +1184,6 @@ void RootProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
       iset->invols[i] *= iset->dinvols[i];
     }
   }
-
-  // Zero the main output buffers- we'll be summing into them
-  sample_t *out[2] = {ab->outs[0][0], ab->outs[1][0]};
-  int stereo = (out[1] != 0 ? 1 : 0);
-  memset(out[0],0,sizeof(sample_t)*len);
-  if (stereo)
-    memset(out[1],0,sizeof(sample_t)*len);
 
   if (!pre) {
     // Setup our own audio route, routing output to our internal buffer
@@ -2702,7 +2695,7 @@ void PassthroughProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
 }
 
 void InputSettings::SetInputVol(int n, float vol, float logvol) { 
-  if (n >= 0 || n < numins) {
+  if (HasInput(n)) {
     if (vol >= 0.) 
       invols[n] = vol; 
     else if (logvol >= 0.)

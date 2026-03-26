@@ -114,19 +114,17 @@ OSStatus AudioIO::process(void *arg,
                           AudioBufferList *ioData) {
   AudioIO *inst = static_cast<AudioIO *>(arg);
   const unsigned int kCPULoadSamplePeriod = 16;
+  const double kNanosPerSecond = 1000000000.0;
 
   register_audio_thread_if_needed(inst, pthread_self());
 
   if (inst->cpuload_sample_count == 0)
-    gettimeofday(&inst->cpuload_start_tv, 0);
+    inst->cpuload_start_ticks = mach_absolute_time();
 
   inst->app->getEMG()->WakeupIfNeeded();
   inst->app->getMMG()->WakeupIfNeeded();
 
   *ioActionFlags |= kAudioUnitRenderAction_OutputIsSilence;
-  memset(ioData->mBuffers[0].mData, 0, ioData->mBuffers[0].mDataByteSize);
-  if (ioData->mNumberBuffers > 1)
-    memset(ioData->mBuffers[1].mData, 0, ioData->mBuffers[1].mDataByteSize);
 
   AudioBuffers *ab = inst->app->getABUFS();
   for (int i = 0; i < ab->numins_ext; i++) {
@@ -154,10 +152,11 @@ OSStatus AudioIO::process(void *arg,
 
   inst->cpuload_sample_count++;
   if (inst->cpuload_sample_count >= kCPULoadSamplePeriod) {
-    struct timeval end_tv;
-    gettimeofday(&end_tv, 0);
-    double elapsed = (double) (end_tv.tv_sec - inst->cpuload_start_tv.tv_sec) +
-                     (double) (end_tv.tv_usec - inst->cpuload_start_tv.tv_usec) / 1000000.0;
+    uint64_t end_ticks = mach_absolute_time();
+    uint64_t elapsed_ticks = end_ticks - inst->cpuload_start_ticks;
+    double elapsed = ((double) elapsed_ticks *
+                      (double) inst->cpuload_timebase.numer /
+                      (double) inst->cpuload_timebase.denom) / kNanosPerSecond;
     double period = (double) inst->cpuload_sample_frames / (double) inst->srate;
     if (period > 0.0)
       inst->cpuload = (float) (elapsed / period);
