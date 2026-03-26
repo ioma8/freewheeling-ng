@@ -22,6 +22,8 @@
 	<string>MAC</string>
 	<key>NSMainNibFile</key>
 	<string>SDLMain</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>FreeWheeling needs microphone access to capture live audio input.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

@@ -11,6 +11,15 @@ interface for instrumentalists to capture audio loops in real-time. Best
 way to understand Freewheeling?? [See and hear it][Freewheeling_Screenshots] in action.
 [Demo Video][Freewheeling_Demo_Video].
 
+### This Fork
+
+This fork keeps the original Freewheeling project alive while restoring a
+working macOS build. The macOS app in `MacOSX/` is currently verified on
+Apple Silicon and builds as a native `arm64` application.
+
+The macOS path in this fork uses the native CoreAudio stack together with
+SDL and the original Freewheeling codebase.
+
 
 ### Philosophy
 
@@ -50,6 +59,42 @@ only limits are your imagination.
     done with other tools.
 
 See the [Technical Features][Technical_Features].
+
+
+Building on macOS
+------------------
+
+The macOS project lives in `MacOSX/fweelin.xcodeproj`. To build it you need:
+
+- Xcode
+- Homebrew
+- Apple Silicon Homebrew in `/opt/homebrew`
+- The following Homebrew libraries:
+  - `sdl`
+  - `sdl2`
+  - `sdl2_ttf`
+  - `sdl_gfx`
+  - `flac`
+  - `vorbis`
+  - `libsndfile`
+  - `liblo`
+  - `nettle`
+  - `openssl@3`
+
+Install them with:
+
+```bash
+brew install sdl sdl2 sdl2_ttf sdl_gfx flac vorbis libsndfile liblo nettle openssl@3
+```
+
+Then build from the repo root with:
+
+```bash
+xcodebuild -project MacOSX/fweelin.xcodeproj -configuration Release build
+```
+
+The project is currently configured for `arm64` and expects headers and
+libraries in the standard Homebrew locations under `/opt/homebrew`.
 
 
 Getting Started

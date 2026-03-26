@@ -18,8 +18,6 @@
    You should have received a copy of the GNU General Public License
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
-#ifndef __MACOSX__
-
 #include <lo/lo.h>
 
 class Fweelin;
@@ -53,7 +51,5 @@ protected:
 
   pthread_mutex_t osc_client_lock;
 };
-
-#endif
 
 #endif

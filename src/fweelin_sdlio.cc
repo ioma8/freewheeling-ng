@@ -441,7 +441,8 @@ void SDLIO::ReceiveEvent(Event *ev, EventProducer */*from*/) {
   switch (ev->GetType()) {
   case T_EV_ExitSession :
     sdlthreadgo = 0;
-    printf("\n** Event: Exit session\n");
+    if (CRITTERS)
+      printf("\n** Event: Exit session\n");
     break;
 
   default:

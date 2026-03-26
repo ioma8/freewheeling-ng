@@ -24,8 +24,6 @@
    You should have received a copy of the GNU General Public License
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
-#ifndef __MACOSX__
-
 #include <sys/time.h>
 
 #include <stdio.h>
@@ -183,5 +181,3 @@ char OSCClient::open_qtractor_connection() {
 
   return (qtractor_addr == 0);
 }
-
-#endif

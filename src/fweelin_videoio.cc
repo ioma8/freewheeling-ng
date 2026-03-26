@@ -2129,29 +2129,42 @@ void *VideoIO::run_video_thread(void *ptr)
     FloFont *cur = inst->app->getCFG()->GetFonts();
     char system_font_path[255];
     char fweelin_font_path[255];
+    char bundled_font_path[255];
+    const char *font_basename;
     while (cur != 0) {
       if (cur->name != 0 && cur->filename != 0 && cur->size != 0) {
+        font_basename = strrchr(cur->filename,'/');
+        if (font_basename != 0)
+          font_basename++;
+        else
+          font_basename = cur->filename;
+
         snprintf(system_font_path,255,"%s/%s","/usr/share/fonts/",cur->filename);
         snprintf(fweelin_font_path,255,"%s/fonts/%s",FWEELIN_DATADIR,cur->filename);
+        snprintf(bundled_font_path,255,"%s/%s",FWEELIN_DATADIR,font_basename);
         printf("VIDEO: Loading %s font: %s (%d pt)\n",cur->name,cur->filename,cur->size);
 
         struct stat st;
-        if (stat(system_font_path,&st) != 0 && stat(fweelin_font_path,&st) != 0) {
+        if (stat(system_font_path,&st) != 0 &&
+            stat(fweelin_font_path,&st) != 0 &&
+            stat(bundled_font_path,&st) != 0) {
           printf("VIDEO: Couldn't find font file: %s "
-                 "in either %s/ or /usr/share/fonts/\n"
+                 "in either %s/, %s/ or /usr/share/fonts/\n"
                  "Did you run 'make install'?\n",
-                 cur->filename, FWEELIN_DATADIR);
+                 cur->filename, FWEELIN_DATADIR, FWEELIN_DATADIR);
           exit(1);
         }
 
         cur->font = TTF_OpenFont(system_font_path, cur->size);
         if (cur->font == 0)
           cur->font = TTF_OpenFont(fweelin_font_path, cur->size);
+        if (cur->font == 0)
+          cur->font = TTF_OpenFont(bundled_font_path, cur->size);
         if (cur->font == 0) {
           printf("VIDEO: Couldn't load %d pt font: %s "
-                 "from either %s/ or /usr/share/fonts/\n"
+                 "from either %s/, %s/ or /usr/share/fonts/\n"
                  "Did you run 'make install'?\n",
-                 cur->size, cur->filename, FWEELIN_DATADIR);
+                 cur->size, cur->filename, FWEELIN_DATADIR, FWEELIN_DATADIR);
           exit(1);
         }
         TTF_SetFontStyle(cur->font, TTF_STYLE_NORMAL);
@@ -2217,8 +2230,13 @@ void *VideoIO::run_video_thread(void *ptr)
   }
 #endif // NO_VIDEO
 
+#ifndef __MACOSX__
   // Close things up
   SDL_QuitSubSystem(SDL_INIT_VIDEO);
+#else
+  // Cocoa window teardown must happen on the main thread; leave the
+  // subsystem alive and let process shutdown reclaim it.
+#endif
 
 #ifdef __MACOSX__
   inst->cocoa.TakedownCocoaThread();

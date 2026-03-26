@@ -329,7 +329,23 @@ void Event::SetupEventTypeTable(MemoryManager *mmgr) {
       SET_ETYPE(T_EV_EndRecord,"__internal__endrecord",EndRecordEvent);
       SET_ETYPE(T_EV_LoopList,"__internal__looplist",LoopListEvent);
       SET_ETYPE(T_EV_SceneMarker,"__internal__scenemarker",SceneMarkerEvent);
-      SET_ETYPE(T_EV_PulseSync,"__internal__pulsesync",PulseSyncEvent);
+      case T_EV_PulseSync:
+        {
+          Event *proto =
+            ::new PulseSyncEvent[1024];
+          ett[i].name = "__internal__pulsesync";
+          ett[i].pretype =
+            new PreallocatedType(mmgr,proto,sizeof(PulseSyncEvent),
+                                 1024,1);
+          ett[i].slowdelivery = 1;
+          int paramidx = -1, j = 0;
+          for (; j < proto->GetNumParams() &&
+               proto->GetParam(j).max_index == -1; j++);
+          if (j < proto->GetNumParams())
+            paramidx = j;
+          ett[i].paramidx = paramidx;
+        }
+        break;
       SET_ETYPE_NUMPREALLOC(T_EV_TriggerSet,"__internal__triggerset",TriggerSetEvent,100);
       SET_ETYPE_NUMPREALLOC(T_EV_AddProcessor,"__internal__addprocessor",AddProcessorEvent,100);
       SET_ETYPE_NUMPREALLOC(T_EV_DelProcessor,"__internal__delprocessor",DelProcessorEvent,100);
@@ -676,4 +692,3 @@ void EventManager::UnlistenEvent(EventListener *callme,
 
   pthread_mutex_unlock(&listener_list_lock);
 };
-

@@ -20,19 +20,17 @@
    You should have received a copy of the GNU General Public License
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
+#ifdef __MACOSX__
+
 #include <sys/time.h>
 
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <math.h>
 #include <string.h>
 
 #include <pthread.h>
-#include <sched.h>
-#include <sys/mman.h>
 
 #include "fweelin_config.h"
 #include "fweelin_audioio.h"
@@ -42,315 +40,487 @@
 #include "fweelin_fluidsynth.h"
 #endif
 
-// **************** SYSTEM LEVEL AUDIO
+static void configure_audio_buffer_list(AudioBufferList *abl,
+                                        sample_t *left,
+                                        sample_t *right,
+                                        nframes_t frames) {
+  abl->mNumberBuffers = 2;
+  abl->mBuffers[0].mNumberChannels = 1;
+  abl->mBuffers[0].mDataByteSize = frames * sizeof(sample_t);
+  abl->mBuffers[0].mData = left;
+  abl->mBuffers[1].mNumberChannels = 1;
+  abl->mBuffers[1].mDataByteSize = frames * sizeof(sample_t);
+  abl->mBuffers[1].mData = right;
+}
 
-int AudioIO::process (nframes_t nframes, void *arg) {
+static inline nframes_t audio_max_frames_per_slice(nframes_t device_frames) {
+  const nframes_t kPreferredFramesPerSlice = 16384;
+  return (device_frames > kPreferredFramesPerSlice ?
+          device_frames : kPreferredFramesPerSlice);
+}
+
+static void register_audio_thread_if_needed(AudioIO *inst, pthread_t thread) {
+  if (inst->audio_thread == 0) {
+    inst->audio_thread = thread;
+    return;
+  }
+
+  if (pthread_equal(inst->audio_thread, thread))
+    return;
+
+  if (inst->audio_thread_2 == 0) {
+    inst->audio_thread_2 = thread;
+    RT_RWThreads::RegisterReaderOrWriter(thread);
+    return;
+  }
+
+  if (pthread_equal(inst->audio_thread_2, thread))
+    return;
+}
+
+OSStatus AudioIO::input_process(void *arg,
+                                AudioUnitRenderActionFlags *ioActionFlags,
+                                const AudioTimeStamp *inTimeStamp,
+                                UInt32 inBusNumber,
+                                UInt32 inNumberFrames,
+                                AudioBufferList */*ioData*/) {
+  AudioIO *inst = static_cast<AudioIO *>(arg);
+  register_audio_thread_if_needed(inst, pthread_self());
+
+  inst->capture_abl->mBuffers[0].mDataByteSize =
+    inst->capture_frames * sizeof(sample_t);
+  inst->capture_abl->mBuffers[1].mDataByteSize =
+    inst->capture_frames * sizeof(sample_t);
+
+  OSStatus err = AudioUnitRender(inst->input_unit,
+                                 ioActionFlags,
+                                 inTimeStamp,
+                                 inBusNumber,
+                                 inNumberFrames,
+                                 inst->capture_abl);
+  if (err != noErr) {
+    memset(inst->capture[0], 0, sizeof(sample_t) * inst->capture_frames);
+    memset(inst->capture[1], 0, sizeof(sample_t) * inst->capture_frames);
+  }
+
+  return noErr;
+}
+
+OSStatus AudioIO::process(void *arg,
+                          AudioUnitRenderActionFlags *ioActionFlags,
+                          const AudioTimeStamp *inTimeStamp,
+                          UInt32 /*inBusNumber*/,
+                          UInt32 inNumberFrames,
+                          AudioBufferList *ioData) {
   AudioIO *inst = static_cast<AudioIO *>(arg);
 
-  if (inst->audio_thread == 0)
-    inst->audio_thread = pthread_self();
+  register_audio_thread_if_needed(inst, pthread_self());
 
-  // Check if EMG or MEM needs wakeup
+  struct timeval start_tv, end_tv;
+  gettimeofday(&start_tv, 0);
+
   inst->app->getEMG()->WakeupIfNeeded();
   inst->app->getMMG()->WakeupIfNeeded();
 
-  // Get CPU load
-  inst->cpuload = jack_cpu_load(inst->client);
+  *ioActionFlags |= kAudioUnitRenderAction_OutputIsSilence;
+  memset(ioData->mBuffers[0].mData, 0, ioData->mBuffers[0].mDataByteSize);
+  if (ioData->mNumberBuffers > 1)
+    memset(ioData->mBuffers[1].mData, 0, ioData->mBuffers[1].mDataByteSize);
 
-  // Get JACK transport timing and status
-  int tmp_roll = 
-    (jack_transport_query(inst->client,&(inst->jpos)) == JackTransportRolling);
-  if (inst->jpos.valid & JackPositionBBT) 
-    inst->sync_active = 1;
-  else
-    inst->sync_active = 0;
-
-  // Get buffers from jack
   AudioBuffers *ab = inst->app->getABUFS();
+  memset(ab->ins[0], 0, sizeof(sample_t *) * ab->numins);
+  memset(ab->ins[1], 0, sizeof(sample_t *) * ab->numins);
+  memset(ab->outs[0], 0, sizeof(sample_t *) * ab->numouts);
+  memset(ab->outs[1], 0, sizeof(sample_t *) * ab->numouts);
   for (int i = 0; i < ab->numins_ext; i++) {
-    // Left/mono channel
-    ab->ins[0][i] = 
-      (sample_t *) jack_port_get_buffer (inst->iport[0][i], nframes);
-    // Right channel
-    ab->ins[1][i] = (inst->iport[1][i] != 0 ?
-                     (sample_t *) 
-                     jack_port_get_buffer (inst->iport[1][i], nframes) :
-                     0);
+    inst->iport[0][i] = inst->capture[0];
+    inst->iport[1][i] = (ab->IsStereoInput(i) ? inst->capture[1] : 0);
+    ab->ins[0][i] = inst->iport[0][i];
+    ab->ins[1][i] = inst->iport[1][i];
   }
   for (int i = 0; i < ab->numouts; i++) {
-    // Left/mono channel
-    ab->outs[0][i] = 
-      (sample_t *) jack_port_get_buffer (inst->oport[0][i], nframes);
-    // Right channel
-    ab->outs[1][i] = (inst->oport[1][i] != 0 ?
-                      (sample_t *) 
-                      jack_port_get_buffer (inst->oport[1][i], nframes) :
-                      0);
+    inst->oport[0][i] = static_cast<sample_t *>(ioData->mBuffers[0].mData);
+    inst->oport[1][i] = (ioData->mNumberBuffers > 1 ?
+                         static_cast<sample_t *>(ioData->mBuffers[1].mData) :
+                         0);
+    ab->outs[0][i] = inst->oport[0][i];
+    ab->outs[1][i] = inst->oport[1][i];
   }
 
-  if (inst->rp != 0) {
-    if (nframes != inst->app->getBUFSZ()) {
-      printf("AUDIO: We've got a problem, honey!--\n");
-      printf("Audio buffer size has changed: %d->%d\n",
-             inst->app->getBUFSZ(),nframes);
-      exit(1);
-    }
+  inst->cpuload = 0.0f;
+  if (inst->rp != 0)
+    inst->rp->process(0, inNumberFrames, ab);
 
-    // Run through audio processors
-    inst->rp->process(0, nframes, ab);
-  }
+  gettimeofday(&end_tv, 0);
+  double elapsed = (double) (end_tv.tv_sec - start_tv.tv_sec) +
+                   (double) (end_tv.tv_usec - start_tv.tv_usec) / 1000000.0;
+  double period = (double) inNumberFrames / (double) inst->srate;
+  if (period > 0.0)
+    inst->cpuload = (float) (elapsed / period);
 
-  inst->timebase_master = 0; // Reset timebase master flag-
-                             // callback will set to 1 if we are the master
-  inst->transport_roll = tmp_roll; // Set transport rolling status
-  return 0;      
-}
-
-// Reposition JACK transport to the given position
-// Used for syncing external apps
-void AudioIO::RelocateTransport(nframes_t pos) {
-  if (timebase_master) {
-    jack_transport_locate(client,pos);
-    repos = 1;
-  }
-};
-
-void AudioIO::timebase_callback(jack_transport_state_t /*state*/,
-                                jack_nframes_t /*nframes*/,
-                                jack_position_t *pos, int new_pos, void *arg) {
-  AudioIO *inst = static_cast<AudioIO *>(arg);
-
-  // Set timebase master flag
   inst->timebase_master = 1;
-
-  /* printf("timebase called back (frame: %d, framerate: %d)!\n", 
-     pos->frame,pos->frame_rate); */
-
-  // Use our pulse information plus JACK's frame information
-  // to calculate bars and beats and ticks
-  Pulse *p = inst->app->getLOOPMGR()->GetCurPulse();
-  if (p != 0) {
-    if (new_pos) {
-      if (inst->repos) 
-        inst->repos = 0; // JACK telling us we have moved- but we initiated
-                         // the move, so ignore
-      else {
-        // Somebody has started the transport at a new position-
-        // signal back that we want to start at a new position--
-        // based on the current pulse position.
-
-        // printf("relocate: posframe: %d to %d\n",pos->frame,p->GetPos()); 
-        jack_transport_locate(inst->client,p->GetPos());
-        inst->repos = 1;
-        
-#if 0
-        inst->sync_start_frame = pos->frame + (p->GetLength()-p->GetPos());
-        printf("posframe: %d syncstartframe set: %d\n",pos->frame,
-               inst->sync_start_frame);
-#endif
-        
-        inst->sync_start_frame = 0; //pos->frame;
-      }
-    }
-
-#define TICKS_PER_BEAT 1920
-
-    int32_t rel_frame = (int) pos->frame - inst->sync_start_frame;
-    float rel_bar = (float) rel_frame*inst->app->GetSyncSpeed()/p->GetLength();
-    if (inst->app->GetSyncType() != 0)
-      // Beat sync, adjust bar by SYNC_BEATS_PER_BAR
-      rel_bar /= SYNC_BEATS_PER_BAR;
-    pos->valid = JackPositionBBT;
-    pos->bar = (int32_t) rel_bar;
-    float bar_frac = rel_bar - pos->bar;
-    pos->beat = (int) (bar_frac * SYNC_BEATS_PER_BAR);
-    pos->beats_per_bar = SYNC_BEATS_PER_BAR;
-    if (inst->app->GetSyncType() == 0)
-      pos->beats_per_minute = SYNC_BEATS_PER_BAR*
-        60.0*(double) pos->frame_rate/p->GetLength();
-    else
-      pos->beats_per_minute = 60.0*(double) pos->frame_rate/p->GetLength();
-    pos->beat_type = SYNC_BEATS_PER_BAR;
-    pos->ticks_per_beat = TICKS_PER_BEAT;
-    float beat_frac = bar_frac*SYNC_BEATS_PER_BAR - (float)pos->beat;
-    pos->tick = (int) (beat_frac * TICKS_PER_BEAT);
-
-    pos->bar++;
-    pos->beat++;
-    //pos->tick++;
-
-    pos->bar_start_tick = pos->bar * SYNC_BEATS_PER_BAR * TICKS_PER_BEAT;
-
-    //printf("ticks per beat: %f\n",pos->ticks_per_beat);
-    //printf("rel bar: %f, bar: %d, beat: %d, tick: %d\n",rel_bar, pos->bar,
-    //       pos->beat, pos->tick);
-  }
+  inst->transport_roll = 0;
+  inst->sync_active = 0;
+  return noErr;
 }
 
-int AudioIO::srate_callback (nframes_t nframes, void *arg) {
-  AudioIO *inst = static_cast<AudioIO *>(arg);
-  printf ("AUDIO: Sample rate is now %d/sec\n", nframes);
-  inst->srate = nframes;
+OSStatus AudioIO::audio_shutdown(void */*arg*/) {
+  fprintf(stderr, "AUDIO: shutdown\n");
+  return noErr;
+}
+
+int AudioIO::open() {
+  AudioComponentDescription desc;
+  memset(&desc, 0, sizeof(desc));
+  desc.componentType = kAudioUnitType_Output;
+  desc.componentSubType = kAudioUnitSubType_HALOutput;
+  desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+
+  AudioComponent comp_in = AudioComponentFindNext(0, &desc);
+  if (comp_in == 0) {
+    fprintf(stderr, "AUDIO: cannot find HAL input unit\n");
+    return 1;
+  }
+  if (AudioComponentInstanceNew(comp_in, &input_unit) != noErr) {
+    fprintf(stderr, "AUDIO: cannot create HAL input unit\n");
+    return 1;
+  }
+
+  AudioComponent comp = AudioComponentFindNext(0, &desc);
+  if (comp == 0) {
+    fprintf(stderr, "AUDIO: cannot find HAL output unit\n");
+    return 1;
+  }
+
+  if (AudioComponentInstanceNew(comp, &unit) != noErr) {
+    fprintf(stderr, "AUDIO: cannot create HAL output unit\n");
+    return 1;
+  }
+
+  UInt32 enable = 1;
+  if (AudioUnitSetProperty(input_unit,
+                           kAudioOutputUnitProperty_EnableIO,
+                           kAudioUnitScope_Input,
+                           1,
+                           &enable,
+                           sizeof(enable)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot enable input on HAL input unit\n");
+    return 1;
+  }
+  enable = 0;
+  if (AudioUnitSetProperty(input_unit,
+                           kAudioOutputUnitProperty_EnableIO,
+                           kAudioUnitScope_Output,
+                           0,
+                           &enable,
+                           sizeof(enable)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot disable output on HAL input unit\n");
+    return 1;
+  }
+  enable = 1;
+  if (AudioUnitSetProperty(unit,
+                           kAudioOutputUnitProperty_EnableIO,
+                           kAudioUnitScope_Input,
+                           1,
+                           &enable,
+                           sizeof(enable)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot enable input on HAL unit\n");
+    return 1;
+  }
+  if (AudioUnitSetProperty(unit,
+                           kAudioOutputUnitProperty_EnableIO,
+                           kAudioUnitScope_Output,
+                           0,
+                           &enable,
+                           sizeof(enable)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot enable output on HAL unit\n");
+    return 1;
+  }
+
+  AudioDeviceID device = kAudioObjectUnknown;
+  UInt32 size = sizeof(device);
+  AudioObjectPropertyAddress addr = {
+    kAudioHardwarePropertyDefaultInputDevice,
+    kAudioObjectPropertyScopeGlobal,
+    kAudioObjectPropertyElementMain
+  };
+  if (AudioObjectGetPropertyData(kAudioObjectSystemObject,
+                                 &addr,
+                                 0,
+                                 0,
+                                 &size,
+                                 &device) != noErr) {
+    fprintf(stderr, "AUDIO: cannot query default input device\n");
+    return 1;
+  }
+  if (AudioUnitSetProperty(input_unit,
+                           kAudioOutputUnitProperty_CurrentDevice,
+                           kAudioUnitScope_Global,
+                           0,
+                           &device,
+                           sizeof(device)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot set input device\n");
+    return 1;
+  }
+
+  AudioDeviceID out_device = kAudioObjectUnknown;
+  size = sizeof(out_device);
+  AudioObjectPropertyAddress out_addr = {
+    kAudioHardwarePropertyDefaultOutputDevice,
+    kAudioObjectPropertyScopeGlobal,
+    kAudioObjectPropertyElementMain
+  };
+  if (AudioObjectGetPropertyData(kAudioObjectSystemObject,
+                                 &out_addr,
+                                 0,
+                                 0,
+                                 &size,
+                                 &out_device) != noErr) {
+    fprintf(stderr, "AUDIO: cannot query default output device\n");
+    return 1;
+  }
+  if (AudioUnitSetProperty(unit,
+                           kAudioOutputUnitProperty_CurrentDevice,
+                           kAudioUnitScope_Global,
+                           0,
+                           &out_device,
+                           sizeof(out_device)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot set current device\n");
+    return 1;
+  }
+
+  Float64 sample_rate = 48000.0;
+  size = sizeof(sample_rate);
+  AudioObjectPropertyAddress rate_addr = {
+    kAudioDevicePropertyNominalSampleRate,
+    kAudioObjectPropertyScopeGlobal,
+    kAudioObjectPropertyElementMain
+  };
+  if (AudioObjectGetPropertyData(out_device,
+                                 &rate_addr,
+                                 0,
+                                 0,
+                                 &size,
+                                 &sample_rate) != noErr ||
+      sample_rate <= 0.0) {
+    sample_rate = 48000.0;
+  }
+
+  AudioStreamBasicDescription fmt;
+  memset(&fmt, 0, sizeof(fmt));
+  fmt.mSampleRate = sample_rate;
+  fmt.mFormatID = kAudioFormatLinearPCM;
+  fmt.mFormatFlags = kAudioFormatFlagsNativeFloatPacked | kAudioFormatFlagIsNonInterleaved;
+  fmt.mBytesPerPacket = sizeof(Float32);
+  fmt.mFramesPerPacket = 1;
+  fmt.mBytesPerFrame = sizeof(Float32);
+  fmt.mChannelsPerFrame = 2;
+  fmt.mBitsPerChannel = 32;
+
+  if (AudioUnitSetProperty(unit,
+                           kAudioUnitProperty_StreamFormat,
+                           kAudioUnitScope_Input,
+                           0,
+                           &fmt,
+                           sizeof(fmt)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot set output stream format\n");
+    return 1;
+  }
+  if (AudioUnitSetProperty(input_unit,
+                           kAudioUnitProperty_StreamFormat,
+                           kAudioUnitScope_Output,
+                           1,
+                           &fmt,
+                           sizeof(fmt)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot set input stream format\n");
+    return 1;
+  }
+  if (AudioUnitSetProperty(unit,
+                           kAudioUnitProperty_StreamFormat,
+                           kAudioUnitScope_Output,
+                           1,
+                           &fmt,
+                           sizeof(fmt)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot set input stream format\n");
+    return 1;
+  }
+
+  UInt32 max_frames = audio_max_frames_per_slice(512);
+
+  if (AudioUnitSetProperty(input_unit,
+                           kAudioUnitProperty_MaximumFramesPerSlice,
+                           kAudioUnitScope_Global,
+                           0,
+                           &max_frames,
+                           sizeof(max_frames)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot set input max frames per slice\n");
+    return 1;
+  }
+  if (AudioUnitSetProperty(unit,
+                           kAudioUnitProperty_MaximumFramesPerSlice,
+                           kAudioUnitScope_Global,
+                           0,
+                           &max_frames,
+                           sizeof(max_frames)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot set output max frames per slice\n");
+    return 1;
+  }
+
+  AURenderCallbackStruct cb;
+  cb.inputProc = input_process;
+  cb.inputProcRefCon = this;
+  if (AudioUnitSetProperty(input_unit,
+                           kAudioOutputUnitProperty_SetInputCallback,
+                           kAudioUnitScope_Global,
+                           0,
+                           &cb,
+                           sizeof(cb)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot set input callback\n");
+    return 1;
+  }
+
+  cb.inputProc = process;
+  cb.inputProcRefCon = this;
+  if (AudioUnitSetProperty(unit,
+                           kAudioUnitProperty_SetRenderCallback,
+                           kAudioUnitScope_Input,
+                           0,
+                           &cb,
+                           sizeof(cb)) != noErr) {
+    fprintf(stderr, "AUDIO: cannot set render callback\n");
+    return 1;
+  }
+
+  if (AudioUnitInitialize(input_unit) != noErr) {
+    fprintf(stderr, "AUDIO: cannot initialize input audio unit\n");
+    return 1;
+  }
+
+  if (AudioUnitInitialize(unit) != noErr) {
+    fprintf(stderr, "AUDIO: cannot initialize audio unit\n");
+    return 1;
+  }
+
+  UInt32 frames = 512;
+  size = sizeof(frames);
+  AudioObjectPropertyAddress frame_addr = {
+    kAudioDevicePropertyBufferFrameSize,
+    kAudioObjectPropertyScopeGlobal,
+    kAudioObjectPropertyElementMain
+  };
+  if (AudioObjectGetPropertyData(device,
+                                 &frame_addr,
+                                 0,
+                                 0,
+                                 &size,
+                                 &frames) != noErr || frames == 0) {
+    frames = 512;
+  }
+
+  bufsize = frames;
+  capture_frames = max_frames;
+  srate = (nframes_t) fmt.mSampleRate;
+  timescale = (float) bufsize / (float) srate;
+  cpuload = 0.0f;
+  sync_start_frame = 0;
+  repos = 0;
+  timebase_master = 1;
+  sync_active = 0;
+  transport_roll = 0;
+  jpos.frame = 0;
+  jpos.valid = 0;
+  jpos.bar = 0;
+  jpos.beat = 0;
+  jpos.beats_per_minute = 120.0;
+  jpos.beats_per_bar = 4.0f;
+  jpos.beat_type = 4;
+  jpos.ticks_per_beat = 1920;
+  jpos.tick = 0;
+  jpos.bar_start_tick = 0;
+  jpos.frame_rate = srate;
+
+  AudioBuffers *ab = app->getABUFS();
+  iport[0] = new sample_t *[ab->numins_ext];
+  iport[1] = new sample_t *[ab->numins_ext];
+  oport[0] = new sample_t *[ab->numouts];
+  oport[1] = new sample_t *[ab->numouts];
+
+  capture[0] = (sample_t *) calloc(capture_frames, sizeof(sample_t));
+  capture[1] = (sample_t *) calloc(capture_frames, sizeof(sample_t));
+  silence[0] = (sample_t *) calloc(capture_frames, sizeof(sample_t));
+  silence[1] = (sample_t *) calloc(capture_frames, sizeof(sample_t));
+
+  size_t abl_size = sizeof(AudioBufferList) + sizeof(AudioBuffer);
+  capture_abl = (AudioBufferList *) calloc(1, abl_size);
+  configure_audio_buffer_list(capture_abl, capture[0], capture[1], capture_frames);
+
+  printf("AUDIO: sample rate %u, buffer size %u, capture capacity %u\n",
+         (unsigned) srate,
+         (unsigned) bufsize,
+         (unsigned) capture_frames);
+  printf("AUDIO: using %d external inputs, %d total inputs\n",
+         ab->numins_ext,
+         ab->numins);
+
   return 0;
 }
 
-void AudioIO::audio_shutdown (void */*arg*/)
-{
-  printf("AUDIO: shutdown! exiting..\n");
-  exit(1);
-}
-
-int AudioIO::activate (Processor *rp) {
-  const char **ports;
-
-  // Store the rootprocessor passed as beginning of signal chain
+int AudioIO::activate(Processor *rp) {
   this->rp = rp;
 
-  // Start rolling audio through JACK server
-  if (jack_activate (client)) {
-    printf("AUDIO: ERROR: Cannot activate client!\n");
+  if (AudioOutputUnitStart(input_unit) != noErr) {
+    fprintf(stderr, "AUDIO: cannot start input audio unit\n");
     return 1;
   }
-  
-  // Connect ports
-  //AudioBuffers *ab = app->getABUFS();
-  
-  // INPUT
-  // No longer connect audio ports because the mapping isn't clear with
-  // multi stereoins/outs
-  if ((ports = jack_get_ports (client, NULL, NULL, JackPortIsPhysical|JackPortIsOutput)) == NULL)
-    printf("AUDIO: WARNING: Cannot find any physical capture ports!\n");
-
-#if 0
-  for (int i = 0; i < ab->numins_ext && ports[i] != 0; i++)
-    if (jack_connect (client, ports[i], jack_port_name (iport[i]))) {
-      printf("AUDIO: Cannot connect input port %d->%s!\n",i,
-             jack_port_name(iport[i]));
-    }
-#endif
-
-  free(ports);
-  
-  // OUTPUT
-  if ((ports = jack_get_ports (client, NULL, NULL, JackPortIsPhysical|JackPortIsInput)) == NULL)
-    printf("AUDIO: WARNING: Cannot find any physical playback ports!");
-
-#if 0
-  for (int i = 0; i < ab->numouts && ports[i] != 0; i++)
-    if (jack_connect (client, jack_port_name (oport[i]), ports[i])) {
-      printf("AUDIO: Cannot connect output port %d->%s!\n",i,
-             jack_port_name(oport[i]));
-    }
-#endif
-
-  free(ports);
+  if (AudioOutputUnitStart(unit) != noErr) {
+    fprintf(stderr, "AUDIO: cannot start audio unit\n");
+    return 1;
+  }
 
   while (audio_thread == 0)
-    // Wait for first process callback to register audio thread
     usleep(10000);
 
   RT_RWThreads::RegisterReaderOrWriter(audio_thread);
-
   return 0;
 }
 
 nframes_t AudioIO::getbufsz() {
-  return jack_get_buffer_size (client);
+  return bufsize;
 }
 
-void AudioIO::close () {
-  jack_release_timebase (client);
-  jack_client_close (client);
+void AudioIO::RelocateTransport(nframes_t /*pos*/) {
+}
+
+void AudioIO::close() {
+  if (input_unit != 0) {
+    AudioOutputUnitStop(input_unit);
+    AudioUnitUninitialize(input_unit);
+    AudioComponentInstanceDispose(input_unit);
+    input_unit = 0;
+  }
+  if (unit != 0) {
+    AudioOutputUnitStop(unit);
+    AudioUnitUninitialize(unit);
+    AudioComponentInstanceDispose(unit);
+    unit = 0;
+  }
 
   delete[] iport[0];
   delete[] iport[1];
   delete[] oport[0];
   delete[] oport[1];
 
+  free(capture[0]);
+  free(capture[1]);
+  free(silence[0]);
+  free(silence[1]);
+  free(capture_abl);
+
   printf("AUDIO: end\n");
 }
 
-int AudioIO::open () {
-  // **** AUDIO startup
-  
-  // Try to become a client of the JACK server
-  client = jack_client_open("FreeWheeling", JackNoStartServer, NULL);
-  if (!client) {
-    fprintf (stderr, "AUDIO: ERROR: Jack server not running!\n");
-    return 1;
-  }
-  
-  /* tell the JACK server to call `process()' whenever
-     there is work to be done.
-  */  
-  jack_set_process_callback (client, process, this);
-  
-  jack_nframes_t bufsz = jack_get_buffer_size (client);
-  printf ("AUDIO: Audio buffer size is: %d\n", bufsz);
+#else
 
-  /* tell the JACK server to call `srate_callback()' whenever
-     the sample rate of the system changes.
-  */
-  jack_set_sample_rate_callback (client, srate_callback, this);
-  
-  /* tell the JACK server to call `jack_shutdown()' if
-     it ever shuts down, either entirely, or if it
-     just decides to stop calling us.
-  */
-  jack_on_shutdown (client, audio_shutdown, this);
-  
-  // Set timebase callback
-  jack_set_timebase_callback (client, 1, timebase_callback, this);
+// Non-macOS JACK implementation is intentionally left in the original tree.
 
-  /* display the current sample rate. once the client is activated 
-     (see below), you should rely on your own sample rate
-     callback (see above) for this value.
-  */
-  srate = jack_get_sample_rate (client);
-  printf ("AUDIO: Engine sample rate is %d\n", srate);
-
-  // Set time scale
-  timescale = (float) bufsz/srate;
-
-  repos = 0;
-
-  // Create buffers
-  AudioBuffers *ab = app->getABUFS();
-
-  printf("AUDIO: Using %d external inputs, %d total inputs\n",
-         ab->numins_ext,ab->numins);
-  iport[0] = new jack_port_t *[ab->numins_ext];
-  iport[1] = new jack_port_t *[ab->numins_ext];
-  oport[0] = new jack_port_t *[ab->numouts];
-  oport[1] = new jack_port_t *[ab->numouts];
-
-  // Create ports
-  char tmp[255];
-  for (int i = 0; i < ab->numins_ext; i++) {
-    char stereo = ab->IsStereoInput(i);
-    snprintf(tmp,255,"in_%d%s",i+1,(stereo ? "L" : ""));
-    iport[0][i] = jack_port_register(client, tmp, JACK_DEFAULT_AUDIO_TYPE, 
-                                     JackPortIsInput, 0);
-    if (stereo) {
-      snprintf(tmp,255,"in_%d%s",i+1,"R");
-      iport[1][i] = jack_port_register(client, tmp, JACK_DEFAULT_AUDIO_TYPE, 
-                                       JackPortIsInput, 0);
-    } else
-      iport[1][i] = 0;
-  }
-
-  for (int i = 0; i < ab->numouts; i++) {
-    char stereo = ab->IsStereoOutput(i);
-    snprintf(tmp,255,"out_%d%s",i+1,(stereo ? "L" : ""));
-    oport[0][i] = jack_port_register(client, tmp, JACK_DEFAULT_AUDIO_TYPE, 
-                                     JackPortIsOutput, 0);
-    if (stereo) {
-      snprintf(tmp,255,"out_%d%s",i+1,"R");
-      oport[1][i] = jack_port_register(client, tmp, JACK_DEFAULT_AUDIO_TYPE, 
-                                       JackPortIsOutput, 0);
-    } else
-      oport[1][i] = 0;
-  }
-  
-  return 0;
-}
+#endif

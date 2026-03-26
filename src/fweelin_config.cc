@@ -99,6 +99,13 @@ void FloConfig::CopyConfigFile (char *cfgname, char copyall) {
     }
   } else {
     // Config file exists? (need to backup?)
+    char src[CFG_PATH_MAX];
+    snprintf(src,CFG_PATH_MAX,"%s/%s",FWEELIN_DATADIR,cfgname);
+    struct stat srcst;
+    if (stat(src,&srcst) != 0) {
+      return;
+    }
+
     snprintf(buf,CFG_PATH_MAX,"%s/%s/%s",homedir,
              FWEELIN_CONFIG_DIR,cfgname);
     struct stat st;
@@ -130,12 +137,11 @@ void FloConfig::CopyConfigFile (char *cfgname, char copyall) {
     snprintf(buf2,CFG_PATH_MAX*2,"cp \"%s/%s\" \"%s/%s\"",
              FWEELIN_DATADIR,cfgname,
              homedir,FWEELIN_CONFIG_DIR);
-    printf("INIT: Copying: %s\n",buf2);
     system(buf2);
   }
 };
 
-char *FloConfig::PrepareLoadConfigFile (char *cfgname, char basecfg) {
+char *FloConfig::PrepareLoadConfigFile (char *cfgname, char basecfg, char quiet) {
   static char buf[CFG_PATH_MAX];
   char *homedir = getenv("HOME");
 
@@ -149,25 +155,30 @@ char *FloConfig::PrepareLoadConfigFile (char *cfgname, char basecfg) {
       if (go == 2) {
         // Already tried to copy config file from shared. 
         // Config file not found
-        printf("INIT: Can't find configuration file '%s'.\n",buf);
+        if (!quiet)
+          printf("INIT: Can't find configuration file '%s'.\n",buf);
         return 0;
       } else {
         // 1st try-
         // Can't find config file in config dir-
-        printf("INIT: Configuration file '%s' not in usual place. "
-               "Checking.\n",buf);
+        if (!quiet)
+          printf("INIT: Configuration file '%s' not in usual place. "
+                 "Checking.\n",buf);
         
         // Check if config dir exists?
         snprintf(buf,CFG_PATH_MAX,"%s/%s",homedir,FWEELIN_CONFIG_DIR);
         if (mkdir(buf,S_IRWXU)) {
           if (errno != EEXIST) {
-            printf("INIT: Error %d creating config folder '%s'- "
-                   "do you have write permission there?\n",
-                   errno,buf);
+            if (!quiet)
+              printf("INIT: Error %d creating config folder '%s'- "
+                     "do you have write permission there?\n",
+                     errno,buf);
           }
         } else {
-          printf("INIT: *** Created new config folder '%s'.\n",buf);
-          printf("INIT: Copying static files from shared folder...\n");
+          if (!quiet) {
+            printf("INIT: *** Created new config folder '%s'.\n",buf);
+            printf("INIT: Copying static files from shared folder...\n");
+          }
 
           // copy static assets to user config dir
           CopyConfigFile("bcf2000-help.txt",0);
@@ -1088,8 +1099,6 @@ void InputMatrix::CreateBinding (int interfaceid, xmlNode *binding) {
            " [Invalid binding: No input event!]\n"
            FWEELIN_ERROR_COLOR_OFF);
   } else {
-    printf(" binding: input '%s'", (char *) instr);
-
     // Go from the named event to an Event* prototype
     // Wait for an instance if none available
     Event *inproto = Event::GetEventByName((char *)instr,1);
@@ -1988,6 +1997,7 @@ void FloConfig::ConfigureBasics(xmlDocPtr /*doc*/, xmlNode *gen) {
                                  (const xmlChar *)"audioinputmonitoring")) != 0) {
         int intaudioins = AudioBuffers::GetIntAudioIns();
         monitor_inputs = new char[extaudioins + intaudioins];
+        char have_monitor = 0;
 
         // Assign stereo/mono and create input variables
         for (int i = 0; i < extaudioins + intaudioins; i++) {
@@ -1996,6 +2006,7 @@ void FloConfig::ConfigureBasics(xmlDocPtr /*doc*/, xmlNode *gen) {
             case 'Y' :
             case 'y' :
               monitor_inputs[i] = 1;
+              have_monitor = 1;
               printf("CONFIG: Input #%d is monitored\n",i+1);
               break;
 
@@ -2017,6 +2028,14 @@ void FloConfig::ConfigureBasics(xmlDocPtr /*doc*/, xmlNode *gen) {
           } else
             monitor_inputs[i] = 1;  // Assume monitoring
         }
+
+#ifdef __MACOSX__
+        if (!have_monitor) {
+          printf("CONFIG: Enabling software monitoring for macOS inputs.\n");
+          for (int i = 0; i < extaudioins; i++)
+            monitor_inputs[i] = 1;
+        }
+#endif
       } else if ((n = xmlGetProp(cur_node,
                                  (const xmlChar *)"externalaudioinputs")) != 0) {
         // # of inputs
@@ -3317,7 +3336,6 @@ void FloConfig::ConfigureGraphics(xmlDocPtr doc, xmlNode *vid,
     } else if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"layout"))) {
       // Layout declaration
       FloLayout *nw = new FloLayout();
-      printf("CONFIG: New onscreen loop layout: ");
 
       // Set interface ID based on 
       // what interface the layout is declared in
@@ -3326,15 +3344,12 @@ void FloConfig::ConfigureGraphics(xmlDocPtr doc, xmlNode *vid,
       xmlChar *n = xmlGetProp(cur_node, (const xmlChar *)"id");
       if (n != 0) {
         nw->id = atoi((char *)n);
-        printf("#%d ",nw->id);
         xmlFree(n);
       }
 
       n = xmlGetProp(cur_node, (const xmlChar *)"show");
       if (n != 0) {
         nw->show = atoi((char *)n);
-        if (nw->show)
-          printf("(show) ");
         xmlFree(n);
       }
 
@@ -3468,6 +3483,10 @@ UserVariable *FloConfig::AddEmptyVariable(char *name) {
     nw->name = new char[strlen(name)+1];
     strcpy(nw->name,name);
   }
+  // Give placeholders a safe default value so early config evaluation does
+  // not spam warnings before the real system pointer is linked up.
+  nw->type = T_int;
+  *nw = 0;
 
   // Insert into variable list
   nw->next = im.vars;
@@ -3634,7 +3653,7 @@ void FloConfig::ConfigureInterfaces (xmlDocPtr /*doc*/, xmlNode *ifs,
       if (n != 0) {
         printf("INIT: Load interface '%s' [%s]\n",(char *) n,
                (firstpass ? "first pass" : "second pass"));
-        char *buf = PrepareLoadConfigFile((char *) n,0);
+        char *buf = PrepareLoadConfigFile((char *) n,0,1);
 
         xmlSubstituteEntitiesDefault(1);
         xmlDocPtr doc = (buf == 0 ? 0 : xmlParseFile(buf));

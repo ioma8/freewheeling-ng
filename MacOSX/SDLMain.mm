@@ -9,6 +9,8 @@
 #import "SDLMain.h"
 #include "FweelinMac.h"
 
+#import <AVFoundation/AVFoundation.h>
+#import <dispatch/dispatch.h>
 #import <sys/param.h> /* for MAXPATHLEN */
 #import <unistd.h>
 
@@ -254,6 +256,27 @@ static void setupWindowMenu(void)
     [windowMenuItem release];
 }
 
+static void requestMicrophoneAccessIfNeeded(void)
+{
+    AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+    if (status == AVAuthorizationStatusAuthorized)
+        return;
+    if (status == AVAuthorizationStatusDenied || status == AVAuthorizationStatusRestricted) {
+        NSLog(@"Microphone access is denied or restricted.");
+        return;
+    }
+
+    dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+    __block BOOL granted = NO;
+    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL ok) {
+        granted = ok;
+        dispatch_semaphore_signal(sem);
+    }];
+    dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+    if (!granted)
+        NSLog(@"Microphone access was not granted.");
+}
+
 /* Replacement for NSApplicationMain */
 static void CustomApplicationMain (int argc, char **argv)
 {
@@ -282,6 +305,7 @@ static void CustomApplicationMain (int argc, char **argv)
     /* Create SDLMain and make it the app delegate */
     sdlMain = [[SDLMain alloc] init];
     [NSApp setDelegate:sdlMain];
+    requestMicrophoneAccessIfNeeded();
    	
     /* Start the main event loop */
     [NSApp run];
@@ -435,7 +459,6 @@ int main (int argc, char **argv)
 	// printf("MULTITHREADED: %d\n",[NSThread isMultiThreaded]);	
 	
 #if SDL_USE_NIB_FILE
-    [SDLApplication poseAsClass:[NSApplication class]];
     NSApplicationMain (argc, (const char **) argv);
 #else
     CustomApplicationMain (argc, argv);

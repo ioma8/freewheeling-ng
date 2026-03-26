@@ -3204,9 +3204,6 @@ int Fweelin::go()
   // Broadcast events for starting all interfaces!
   cfg->StartInterfaces();
 
-  // Encourage the user!
-  printf("\n-- ** OKIE DOKIE, KIDDO! ** --\n");
-
   // *** SDL IO is now done in main thread- Mac OS X SDL requires it, and on Linux it's one less thread
   SDLIO::run_sdl_thread(sdlio);
 
@@ -3528,7 +3525,6 @@ int Fweelin::setup()
   tmpv = cfg->AddEmptyVariable("BROWSE_patch");
   tmpv->type = T_int;
   *tmpv = (int) B_Patch;
-  cfg->AddEmptyVariable("SYSTEM_num_midi_outs");
   cfg->AddEmptyVariable("SYSTEM_midi_transpose");
   cfg->AddEmptyVariable("SYSTEM_master_in_volume");
   cfg->AddEmptyVariable("SYSTEM_master_out_volume");
@@ -3539,9 +3535,8 @@ int Fweelin::setup()
   cfg->AddEmptyVariable("SYSTEM_sync_active");
   cfg->AddEmptyVariable("SYSTEM_sync_transmit");
   cfg->AddEmptyVariable("SYSTEM_midisync_transmit");
-#if USE_FLUIDSYNTH
   cfg->AddEmptyVariable("SYSTEM_fluidsynth_enabled");
-#endif
+  cfg->AddEmptyVariable("SYSTEM_num_midi_outs");
   cfg->AddEmptyVariable("SYSTEM_num_help_pages");
   cfg->AddEmptyVariable("SYSTEM_num_loops_in_map");
   cfg->AddEmptyVariable("SYSTEM_num_recording_loops_in_map");
@@ -3550,6 +3545,15 @@ int Fweelin::setup()
   cfg->AddEmptyVariable("SYSTEM_num_switchable_interfaces");
   cfg->AddEmptyVariable("SYSTEM_cur_switchable_interface");
   cfg->AddEmptyVariable("SYSTEM_snapshot_page_firstidx");
+  for (int i = 0; i < 4; i++) {
+    char tmp2[255];
+    snprintf(tmp2, 255, "SYSTEM_in_%d_volume", i + 1);
+    cfg->AddEmptyVariable(tmp2);
+    snprintf(tmp2, 255, "SYSTEM_in_%d_peak", i + 1);
+    cfg->AddEmptyVariable(tmp2);
+    snprintf(tmp2, 255, "SYSTEM_in_%d_record", i + 1);
+    cfg->AddEmptyVariable(tmp2);
+  }
   for (int i = 0; i < LAST_REC_COUNT; i++) {
     sprintf(tmp,"SYSTEM_loopid_lastrecord_%d",i);
     cfg->AddEmptyVariable(tmp);

@@ -33,7 +33,7 @@
  *
  ************************************************************************/
 
-#if defined(unix) || defined(__unix) || defined(__xlC__)
+#if defined(__APPLE__) || defined(__MACH__) || defined(unix) || defined(__unix) || defined(__xlC__)
 # define PLATFORM_UNIX
 #elif defined(WIN32) || defined(_WIN32)
 # define PLATFORM_WIN32

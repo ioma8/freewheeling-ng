@@ -18,13 +18,41 @@
    You should have received a copy of the GNU General Public License
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
-extern "C"
-{
+#ifdef __MACOSX__
+extern "C" {
+#include <CoreAudio/CoreAudio.h>
+#include <AudioUnit/AudioUnit.h>
+}
+
+typedef float sample_t;
+typedef UInt32 nframes_t;
+
+struct jack_position_t {
+  uint32_t frame;
+  uint32_t valid;
+  int32_t bar;
+  int32_t beat;
+  double beats_per_minute;
+  float beats_per_bar;
+  int32_t beat_type;
+  int32_t ticks_per_beat;
+  int32_t tick;
+  int32_t bar_start_tick;
+  uint32_t frame_rate;
+};
+
+enum {
+  JackPositionBBT = 1,
+  JackTransportRolling = 1
+};
+#else
+extern "C" {
 #include <jack/jack.h>
 }
 
 typedef jack_default_audio_sample_t sample_t;
 typedef jack_nframes_t nframes_t;
+#endif
 
 class Fweelin;
 class Processor;
@@ -33,7 +61,7 @@ class Processor;
 
 class AudioIO {
 public:
-  AudioIO(Fweelin *app) : sync_start_frame(0), timebase_master(0), sync_active(0), audio_thread(0), app(app) {};
+  AudioIO(Fweelin *app) : sync_start_frame(0), timebase_master(0), sync_active(0), audio_thread(0), audio_thread_2(0), app(app) {};
 
   // Open up system level audio
   int open ();
@@ -49,6 +77,26 @@ public:
 
   // **Callbacks**
 
+#ifdef __MACOSX__
+  // Realtime process function for the AudioUnit render callback.
+  static OSStatus input_process (void *arg,
+                                 AudioUnitRenderActionFlags *ioActionFlags,
+                                 const AudioTimeStamp *inTimeStamp,
+                                 UInt32 inBusNumber,
+                                 UInt32 inNumberFrames,
+                                 AudioBufferList *ioData);
+
+  // Realtime process function for the AudioUnit render callback.
+  static OSStatus process (void *arg,
+                           AudioUnitRenderActionFlags *ioActionFlags,
+                           const AudioTimeStamp *inTimeStamp,
+                           UInt32 inBusNumber,
+                           UInt32 inNumberFrames,
+                           AudioBufferList *ioData);
+
+  // Callback for audio shutdown
+  static OSStatus audio_shutdown (void */*arg*/);
+#else
   // Realtime process function.. the beginning of the DSP chain
   static int process (nframes_t nframes, void *arg);
 
@@ -62,6 +110,7 @@ public:
 
   // Callback for audio shutdown
   static void audio_shutdown (void */*arg*/);
+#endif
 
   // Get current sampling rate
   inline nframes_t get_srate() { return srate; };
@@ -98,19 +147,29 @@ public:
   // Is the transport rolling?
   inline char IsTransportRolling() { return transport_roll; };
 
+#ifdef __MACOSX__
+  // Audio unit and per-callback buffer maps.
+  AudioUnit input_unit;
+  AudioUnit unit;
+  sample_t **iport[2], **oport[2];
+  sample_t *capture[2];
+  sample_t *silence[2];
+  AudioBufferList *capture_abl;
+  nframes_t capture_frames;
+  nframes_t bufsize;
+#else
   // Audio system client
   jack_client_t *client;
 
   // Inputs and outputs- stereo pairs
   jack_port_t **iport[2], **oport[2];
+#endif
 
   float cpuload; // Current approximate audio CPU load
   float timescale; // fragment length/sample rate = length (s) of one fragment
   nframes_t srate; // Sampling rate
 
-  // Variables for audio (Jack transport) sync
-
-  // Jack frame where the first bar began in transport
+  // Variables for audio transport sync
   int32_t sync_start_frame; 
   char repos; // Nonzero if we have repositioned JACK internally
   jack_position_t jpos; // Current JACK position
@@ -118,7 +177,8 @@ public:
   char sync_active;     // Nonzero if sync is active
   char transport_roll;  // Nonzero if the transport is rolling
 
-  volatile pthread_t audio_thread;  // RT audio thread (created by JACK)
+  volatile pthread_t audio_thread;  // RT audio thread
+  volatile pthread_t audio_thread_2; // Optional second RT audio thread
 
   // Pointer to the main app
   Fweelin *app;

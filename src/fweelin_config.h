@@ -759,7 +759,7 @@ class FloConfig {
   // Prepare to load configuration file 'cfgname' 
   // Finds the file in one of several places, and copies it to
   // the config folder. Returns the path name if found, or null if not found
-  char *PrepareLoadConfigFile (char *cfgname, char basecfg);
+  char *PrepareLoadConfigFile (char *cfgname, char basecfg, char quiet = 0);
   
   // Configure bindings between events and their triggers
   void ConfigureEventBindings(xmlDocPtr /*doc*/, xmlNode *events,

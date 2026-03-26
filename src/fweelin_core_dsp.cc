@@ -433,8 +433,10 @@ void Pulse::SetMIDIClock (char start) {
       // Send MIDI stop for pulse
       MIDIStartStopInputEvent *ssevt = 
         (MIDIStartStopInputEvent *) Event::GetEventByType(T_EV_Input_MIDIStartStop);
-      ssevt->start = 0;
-      app->getEMG()->BroadcastEventNow(ssevt, this);         
+      if (ssevt != 0) {
+        ssevt->start = 0;
+        app->getEMG()->BroadcastEvent(ssevt, this);
+      }
     }
   }
 };
@@ -561,8 +563,10 @@ void Pulse::process(char pre, nframes_t l, AudioBuffers *ab) {
 
           MIDIStartStopInputEvent *ssevt = 
             (MIDIStartStopInputEvent *) Event::GetEventByType(T_EV_Input_MIDIStartStop);
-          ssevt->start = 1;
-          app->getEMG()->BroadcastEventNow(ssevt, this);    
+          if (ssevt != 0) {
+            ssevt->start = 1;
+            app->getEMG()->BroadcastEvent(ssevt, this);
+          }
 
           // If this is the first downbeat, start the clock proper
           clockrun = SS_BEAT;
@@ -583,11 +587,8 @@ void Pulse::process(char pre, nframes_t l, AudioBuffers *ab) {
 
           // Time for another clock message
           MIDIClockInputEvent *clkevt = (MIDIClockInputEvent *) Event::GetEventByType(T_EV_Input_MIDIClock);
-          // *** Broadcast immediately-- this will yield lowest MIDI sync latency,
-          // but may cause problems if MIDI transmit code blocks/conflicts with RT audio thread
-          // (which it very well might)
-          // _experimental_
-          app->getEMG()->BroadcastEventNow(clkevt, this);
+          if (clkevt != 0)
+            app->getEMG()->BroadcastEvent(clkevt, this);
         }
       }
     }
@@ -606,7 +607,8 @@ void Pulse::process(char pre, nframes_t l, AudioBuffers *ab) {
       // Send out a pulse sync event
       PulseSyncEvent *pevt = (PulseSyncEvent *) 
         Event::GetEventByType(T_EV_PulseSync);
-      app->getEMG()->BroadcastEventNow(pevt, this);
+      if (pevt != 0)
+        app->getEMG()->BroadcastEvent(pevt, this);
 
       // Trigger management of any RT work on blocks
       // (currently PulseSync event handles loop points, but
@@ -1515,7 +1517,8 @@ RecordProcessor::~RecordProcessor()
 
   // Redundant check- stop pulse sync callback
   if (sync != 0 && sync_idx != -1) {
-    printf("CORE: Stray PulseSync Callback!\n");
+    if (CRITTERS)
+      printf("CORE: Stray PulseSync Callback!\n");
     sync->DelPulseSync(sync_idx);
   }
   
@@ -2193,7 +2196,8 @@ PlayProcessor::~PlayProcessor() {
 
   // Redundant check- stop pulse sync callback
   if (sync != 0 && sync_idx != -1) {
-    printf("CORE: Stray PulseSync Callback!\n");
+    if (CRITTERS)
+      printf("CORE: Stray PulseSync Callback!\n");
     sync->DelPulseSync(sync_idx);
   }
 

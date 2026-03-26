@@ -191,7 +191,7 @@ int MidiIO::activate() {
   // Prepare auto-bypass
   bp = new BypassInfo[fs->GetNumMIDIOuts()*MAX_MIDI_CHANNELS];
 
-  inst->checkfreq = inst->app->getAUDIO()->get_srate(); // How often to check auto-bypass conditions for MIDI
+  checkfreq = app->getAUDIO()->get_srate(); // How often to check auto-bypass conditions for MIDI
 
   return 0;
 }
@@ -341,7 +341,7 @@ void MidiIO::OutputStop (int port) {
 void MidiIO::OutputStartOnPort () {
   // Init output packet
   curPacket = MIDIPacketListInit(packetList);
-};b
+};
 
 void MidiIO::OutputEndOnPort (int port) {
   // Send MIDI packet- all messages for this port
@@ -680,6 +680,12 @@ void MidiIO::OutputStartOnPort () {};
 void MidiIO::OutputEndOnPort (int /*port*/) {};
 
 #endif // __MACOSX__
+
+// macOS build helper: ensure the song-position output symbol is present.
+#ifdef __MACOSX__
+void MidiIO::OutputSPP (int /*port*/) {
+};
+#endif
 
 // ******** CROSS-PLATFORM MIDI CODE
 

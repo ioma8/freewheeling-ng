@@ -38,7 +38,7 @@
 #include "fweelin_datatypes.h"
 
 // Room for this many instances created / deleted between manager thread passes
-#define MEMMGR_UPDATE_QUEUE_SIZE 1000
+#define MEMMGR_UPDATE_QUEUE_SIZE 8192
 
 MemoryManager::MemoryManager() : update_queue(0) {
   // Init mutex/conditions
@@ -95,7 +95,7 @@ MemoryManager::~MemoryManager() {
 void MemoryManager::WakeUp(MemoryManagerUpdate &upd) {
   if (update_queue->WriteElement(upd) != 0) {
     printf("MEM: ERROR: No space in memory manager update queue!\nMust increase MEMMGR_UPDATE_QUEUE_SIZE.\n");
-    exit(1);
+    return;
   }
 
   // Wake up the manager thread

@@ -19,7 +19,11 @@
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+#ifdef __MACOSX__
+#include "jack/ringbuffer.h"
+#else
 #include <jack/ringbuffer.h>
+#endif
 #include <assert.h>
 
 

@@ -18,13 +18,17 @@
    You should have received a copy of the GNU General Public License
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include <linux/limits.h>
+#include <limits.h>
 #include <pthread.h>
 
 #include <SDL/SDL.h>
 extern "C"
 {
+#ifdef __MACOSX__
+#include "jack/ringbuffer.h"
+#else
 #include <jack/ringbuffer.h>
+#endif
 }
 
 // Event parameter name for interface ID

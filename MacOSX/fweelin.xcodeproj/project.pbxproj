@@ -10,7 +10,6 @@
 		002F39FA09D0881F00EBEB88 /* SDL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 002F39F909D0881F00EBEB88 /* SDL.framework */; };
 		002F3A0009D0884600EBEB88 /* SDL.framework in Copy Frameworks into .app bundle */ = {isa = PBXBuildFile; fileRef = 002F39F909D0881F00EBEB88 /* SDL.framework */; };
 		002F3A2E09D0888800EBEB88 /* SDLMain.mm in Sources */ = {isa = PBXBuildFile; fileRef = 002F3A2C09D0888800EBEB88 /* SDLMain.mm */; };
-		3D8261B70E96C8B600B480B6 /* Jackmp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D8261B60E96C8B600B480B6 /* Jackmp.framework */; };
 		3D82625C0E96CDC700B480B6 /* fweelin.xml in Resources */ = {isa = PBXBuildFile; fileRef = 3D8262480E96CDC700B480B6 /* fweelin.xml */; };
 		3D82625D0E96CDC700B480B6 /* coreinterface.xml in Resources */ = {isa = PBXBuildFile; fileRef = 3D8262490E96CDC700B480B6 /* coreinterface.xml */; };
 		3D82625E0E96CDC700B480B6 /* interfaces.xml in Resources */ = {isa = PBXBuildFile; fileRef = 3D82624A0E96CDC700B480B6 /* interfaces.xml */; };
@@ -32,14 +31,19 @@
 		3D82626F0E96CDC700B480B6 /* patches3.xml in Resources */ = {isa = PBXBuildFile; fileRef = 3D82625B0E96CDC700B480B6 /* patches3.xml */; };
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
+		D1A001100AC8E0BE00FE916E /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1A001110AC8E0BE00FE916E /* AVFoundation.framework */; };
 		AC12675D0AC8E0BE00FE916E /* CoreMIDI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC12675C0AC8E0BE00FE916E /* CoreMIDI.framework */; };
-		AC126C440AC8EF4000FE916E /* verabd.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AC126C420AC8EF4000FE916E /* verabd.ttf */; };
-		AC126C450AC8EF4000FE916E /* vera.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AC126C430AC8EF4000FE916E /* vera.ttf */; };
+		AC1267600AC8E0BE00FE916E /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC12675E0AC8E0BE00FE916E /* AudioUnit.framework */; };
+		AC1267610AC8E0BE00FE916E /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC12675F0AC8E0BE00FE916E /* CoreAudio.framework */; };
+		AC126C440AC8EF4000FE916E /* VeraBd.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AC126C420AC8EF4000FE916E /* VeraBd.ttf */; };
+		AC126C450AC8EF4000FE916E /* Vera.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AC126C430AC8EF4000FE916E /* Vera.ttf */; };
 		AC5A532A0AC099C900622F72 /* Ogg.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5A53240AC099C900622F72 /* Ogg.framework */; };
 		AC5A532B0AC099C900622F72 /* SDL_gfx.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5A53250AC099C900622F72 /* SDL_gfx.framework */; };
 		AC5A532C0AC099C900622F72 /* SDL_ttf.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5A53260AC099C900622F72 /* SDL_ttf.framework */; };
 		AC5A532D0AC099C900622F72 /* Vorbis.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5A53270AC099C900622F72 /* Vorbis.framework */; };
 		AC5A53EF0AC09A6400622F72 /* fweelin_audioio.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53D30AC09A6400622F72 /* fweelin_audioio.cc */; };
+		B1A001000AC09A6400622F72 /* fweelin_videoio_displays.cc in Sources */ = {isa = PBXBuildFile; fileRef = B1A001010AC09A6400622F72 /* fweelin_videoio_displays.cc */; };
+		B1A001020AC09A6400622F72 /* stacktrace.c in Sources */ = {isa = PBXBuildFile; fileRef = B1A001030AC09A6400622F72 /* stacktrace.c */; };
 		AC5A53F10AC09A6400622F72 /* fweelin_block.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53D50AC09A6400622F72 /* fweelin_block.cc */; };
 		AC5A53F30AC09A6400622F72 /* fweelin_browser.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53D70AC09A6400622F72 /* fweelin_browser.cc */; };
 		AC5A53F50AC09A6400622F72 /* fweelin_config.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53D90AC09A6400622F72 /* fweelin_config.cc */; };
@@ -50,9 +54,11 @@
 		AC5A53FF0AC09A6400622F72 /* fweelin_fluidsynth.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E30AC09A6400622F72 /* fweelin_fluidsynth.cc */; };
 		AC5A54020AC09A6400622F72 /* fweelin_mem.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E60AC09A6400622F72 /* fweelin_mem.cc */; };
 		AC5A54040AC09A6400622F72 /* fweelin_midiio.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E80AC09A6400622F72 /* fweelin_midiio.cc */; };
+		B1A001040AC09A6400622F72 /* fweelin_paramset.cc in Sources */ = {isa = PBXBuildFile; fileRef = B1A001050AC09A6400622F72 /* fweelin_paramset.cc */; };
 		AC5A54060AC09A6400622F72 /* fweelin_sdlio.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53EA0AC09A6400622F72 /* fweelin_sdlio.cc */; };
 		AC5A54080AC09A6400622F72 /* fweelin_videoio.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53EC0AC09A6400622F72 /* fweelin_videoio.cc */; };
 		AC5A540A0AC09A6400622F72 /* fweelin.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53EE0AC09A6400622F72 /* fweelin.cc */; };
+		AC5A540B0AC09A6400622F72 /* fweelin_osc.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53F00AC09A6400622F72 /* fweelin_osc.cc */; };
 		AC6429D90AD9C85700752A08 /* Sndfile.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC6429D80AD9C85700752A08 /* Sndfile.framework */; };
 		AC6429DC0AD9C85C00752A08 /* Sndfile.framework in Copy Frameworks into .app bundle */ = {isa = PBXBuildFile; fileRef = AC6429D80AD9C85700752A08 /* Sndfile.framework */; };
 		AC776D470B69B161005E3D84 /* freewheeling.icns in Resources */ = {isa = PBXBuildFile; fileRef = AC776D460B69B161005E3D84 /* freewheeling.icns */; };
@@ -89,10 +95,10 @@
 		002F3A2C09D0888800EBEB88 /* SDLMain.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; path = SDLMain.mm; sourceTree = "<group>"; };
 		089C165DFE840E0CC02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
+		D1A001110AC8E0BE00FE916E /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = /System/Library/Frameworks/AVFoundation.framework; sourceTree = "<absolute>"; };
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		32CA4F630368D1EE00C91783 /* fweelin_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fweelin_Prefix.pch; sourceTree = "<group>"; };
-		3D8261B60E96C8B600B480B6 /* Jackmp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Jackmp.framework; path = /Library/Frameworks/Jackmp.framework; sourceTree = "<absolute>"; };
 		3D8262480E96CDC700B480B6 /* fweelin.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = fweelin.xml; path = ../data/fweelin.xml; sourceTree = SOURCE_ROOT; };
 		3D8262490E96CDC700B480B6 /* coreinterface.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = coreinterface.xml; path = ../data/coreinterface.xml; sourceTree = SOURCE_ROOT; };
 		3D82624A0E96CDC700B480B6 /* interfaces.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = interfaces.xml; path = ../data/interfaces.xml; sourceTree = SOURCE_ROOT; };
@@ -115,14 +121,17 @@
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* fweelin.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = fweelin.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC12675C0AC8E0BE00FE916E /* CoreMIDI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMIDI.framework; path = /System/Library/Frameworks/CoreMIDI.framework; sourceTree = "<absolute>"; };
-		AC126C420AC8EF4000FE916E /* verabd.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = verabd.ttf; path = ../data/verabd.ttf; sourceTree = SOURCE_ROOT; };
-		AC126C430AC8EF4000FE916E /* vera.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = vera.ttf; path = ../data/vera.ttf; sourceTree = SOURCE_ROOT; };
+		AC12675E0AC8E0BE00FE916E /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = /System/Library/Frameworks/AudioUnit.framework; sourceTree = "<absolute>"; };
+		AC12675F0AC8E0BE00FE916E /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = /System/Library/Frameworks/CoreAudio.framework; sourceTree = "<absolute>"; };
+		AC126C420AC8EF4000FE916E /* VeraBd.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = VeraBd.ttf; path = ../data/VeraBd.ttf; sourceTree = SOURCE_ROOT; };
+		AC126C430AC8EF4000FE916E /* Vera.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Vera.ttf; path = ../data/Vera.ttf; sourceTree = SOURCE_ROOT; };
 		AC5A53240AC099C900622F72 /* Ogg.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Ogg.framework; path = /Library/Frameworks/Ogg.framework; sourceTree = "<absolute>"; };
 		AC5A53250AC099C900622F72 /* SDL_gfx.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL_gfx.framework; path = /Library/Frameworks/SDL_gfx.framework; sourceTree = "<absolute>"; };
 		AC5A53260AC099C900622F72 /* SDL_ttf.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL_ttf.framework; path = /Library/Frameworks/SDL_ttf.framework; sourceTree = "<absolute>"; };
 		AC5A53270AC099C900622F72 /* Vorbis.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vorbis.framework; path = /Library/Frameworks/Vorbis.framework; sourceTree = "<absolute>"; };
 		AC5A53D30AC09A6400622F72 /* fweelin_audioio.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_audioio.cc; path = ../src/fweelin_audioio.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53D40AC09A6400622F72 /* fweelin_audioio.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_audioio.h; path = ../src/fweelin_audioio.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		B1A001050AC09A6400622F72 /* fweelin_paramset.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_paramset.cc; path = ../src/fweelin_paramset.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53D50AC09A6400622F72 /* fweelin_block.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_block.cc; path = ../src/fweelin_block.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53D60AC09A6400622F72 /* fweelin_block.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_block.h; path = ../src/fweelin_block.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53D70AC09A6400622F72 /* fweelin_browser.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_browser.cc; path = ../src/fweelin_browser.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
@@ -149,6 +158,9 @@
 		AC5A53EC0AC09A6400622F72 /* fweelin_videoio.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_videoio.cc; path = ../src/fweelin_videoio.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53ED0AC09A6400622F72 /* fweelin_videoio.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_videoio.h; path = ../src/fweelin_videoio.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53EE0AC09A6400622F72 /* fweelin.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin.cc; path = ../src/fweelin.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		AC5A53F00AC09A6400622F72 /* fweelin_osc.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_osc.cc; path = ../src/fweelin_osc.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		B1A001010AC09A6400622F72 /* fweelin_videoio_displays.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_videoio_displays.cc; path = ../src/fweelin_videoio_displays.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		B1A001030AC09A6400622F72 /* stacktrace.c */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = stacktrace.c; path = ../src/stacktrace.c; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC6429D80AD9C85700752A08 /* Sndfile.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sndfile.framework; path = /Library/Frameworks/Sndfile.framework; sourceTree = "<absolute>"; };
 		AC776D460B69B161005E3D84 /* freewheeling.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = freewheeling.icns; sourceTree = "<group>"; };
 		ACA2C53E0B06DCB600E02DC6 /* SDLMain.nib */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; path = SDLMain.nib; sourceTree = "<group>"; };
@@ -161,15 +173,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				002F39FA09D0881F00EBEB88 /* SDL.framework in Frameworks */,
 				8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */,
-				AC5A532A0AC099C900622F72 /* Ogg.framework in Frameworks */,
-				AC5A532B0AC099C900622F72 /* SDL_gfx.framework in Frameworks */,
-				AC5A532C0AC099C900622F72 /* SDL_ttf.framework in Frameworks */,
-				AC5A532D0AC099C900622F72 /* Vorbis.framework in Frameworks */,
+				D1A001100AC8E0BE00FE916E /* AVFoundation.framework in Frameworks */,
 				AC12675D0AC8E0BE00FE916E /* CoreMIDI.framework in Frameworks */,
-				AC6429D90AD9C85700752A08 /* Sndfile.framework in Frameworks */,
-				3D8261B70E96C8B600B480B6 /* Jackmp.framework in Frameworks */,
+				AC1267600AC8E0BE00FE916E /* AudioUnit.framework in Frameworks */,
+				AC1267610AC8E0BE00FE916E /* CoreAudio.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -181,6 +189,7 @@
 			children = (
 				AC5A53D30AC09A6400622F72 /* fweelin_audioio.cc */,
 				AC5A53D40AC09A6400622F72 /* fweelin_audioio.h */,
+				B1A001050AC09A6400622F72 /* fweelin_paramset.cc */,
 				AC5A53D50AC09A6400622F72 /* fweelin_block.cc */,
 				AC5A53D60AC09A6400622F72 /* fweelin_block.h */,
 				AC5A53D70AC09A6400622F72 /* fweelin_browser.cc */,
@@ -205,8 +214,11 @@
 				AC5A53EA0AC09A6400622F72 /* fweelin_sdlio.cc */,
 				AC5A53EB0AC09A6400622F72 /* fweelin_sdlio.h */,
 				AC5A53EC0AC09A6400622F72 /* fweelin_videoio.cc */,
+				B1A001010AC09A6400622F72 /* fweelin_videoio_displays.cc */,
 				AC5A53ED0AC09A6400622F72 /* fweelin_videoio.h */,
 				AC5A53EE0AC09A6400622F72 /* fweelin.cc */,
+				AC5A53F00AC09A6400622F72 /* fweelin_osc.cc */,
+				B1A001030AC09A6400622F72 /* stacktrace.c */,
 				ACFC0A990AC99CDF00DAC478 /* FweelinMac.h */,
 				ACFC0A9A0AC99CDF00DAC478 /* FweelinMac.mm */,
 				002F3A2B09D0888800EBEB88 /* SDLMain.h */,
@@ -219,9 +231,10 @@
 		1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				3D8261B60E96C8B600B480B6 /* Jackmp.framework */,
 				AC6429D80AD9C85700752A08 /* Sndfile.framework */,
 				AC12675C0AC8E0BE00FE916E /* CoreMIDI.framework */,
+				AC12675E0AC8E0BE00FE916E /* AudioUnit.framework */,
+				AC12675F0AC8E0BE00FE916E /* CoreAudio.framework */,
 				AC5A53240AC099C900622F72 /* Ogg.framework */,
 				AC5A53250AC099C900622F72 /* SDL_gfx.framework */,
 				AC5A53260AC099C900622F72 /* SDL_ttf.framework */,
@@ -292,8 +305,8 @@
 				3D82625A0E96CDC700B480B6 /* patches-b3.xml */,
 				3D82625B0E96CDC700B480B6 /* patches3.xml */,
 				AC776D460B69B161005E3D84 /* freewheeling.icns */,
-				AC126C420AC8EF4000FE916E /* verabd.ttf */,
-				AC126C430AC8EF4000FE916E /* vera.ttf */,
+				AC126C420AC8EF4000FE916E /* VeraBd.ttf */,
+				AC126C430AC8EF4000FE916E /* Vera.ttf */,
 				8D1107310486CEB800E47090 /* Info.plist */,
 				089C165CFE840E0CC02AAC07 /* InfoPlist.strings */,
 			);
@@ -319,7 +332,6 @@
 				8D1107290486CEB800E47090 /* Resources */,
 				8D11072C0486CEB800E47090 /* Sources */,
 				8D11072E0486CEB800E47090 /* Frameworks */,
-				002F39FD09D0883400EBEB88 /* Copy Frameworks into .app bundle */,
 			);
 			buildRules = (
 			);
@@ -354,8 +366,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */,
-				AC126C440AC8EF4000FE916E /* verabd.ttf in Resources */,
-				AC126C450AC8EF4000FE916E /* vera.ttf in Resources */,
+				AC126C440AC8EF4000FE916E /* VeraBd.ttf in Resources */,
+				AC126C450AC8EF4000FE916E /* Vera.ttf in Resources */,
 				ACA2C53F0B06DCB600E02DC6 /* SDLMain.nib in Resources */,
 				AC776D470B69B161005E3D84 /* freewheeling.icns in Resources */,
 				3D82625C0E96CDC700B480B6 /* fweelin.xml in Resources */,
@@ -399,9 +411,13 @@
 				AC5A53FF0AC09A6400622F72 /* fweelin_fluidsynth.cc in Sources */,
 				AC5A54020AC09A6400622F72 /* fweelin_mem.cc in Sources */,
 				AC5A54040AC09A6400622F72 /* fweelin_midiio.cc in Sources */,
+				B1A001040AC09A6400622F72 /* fweelin_paramset.cc in Sources */,
 				AC5A54060AC09A6400622F72 /* fweelin_sdlio.cc in Sources */,
 				AC5A54080AC09A6400622F72 /* fweelin_videoio.cc in Sources */,
+				B1A001000AC09A6400622F72 /* fweelin_videoio_displays.cc in Sources */,
 				AC5A540A0AC09A6400622F72 /* fweelin.cc in Sources */,
+				AC5A540B0AC09A6400622F72 /* fweelin_osc.cc in Sources */,
+				B1A001020AC09A6400622F72 /* stacktrace.c in Sources */,
 				ACFC0A9C0AC99CDF00DAC478 /* FweelinMac.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -439,10 +455,7 @@
 		C01FCF4C08A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					ppc,
-					i386,
-				);
+				ARCHS = arm64;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_MODEL_TUNING = G5;
 				INFOPLIST_FILE = Info.plist;
@@ -455,13 +468,8 @@
 		C01FCF4F08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					i386,
-					ppc,
-				);
+				ARCHS = arm64;
 				FRAMEWORK_SEARCH_PATHS = (
-					"$(HOME)/Library/Frameworks",
-					/Library/Frameworks,
 					"$(FRAMEWORK_SEARCH_PATHS)",
 				);
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -469,10 +477,18 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					"$(HOME)/Library/Frameworks/SDL.framework/Headers",
-					/Library/Frameworks/SDL.framework/Headers,
+					"$(PROJECT_DIR)/../src",
+					/opt/homebrew/include,
+					/opt/homebrew/include/SDL,
+					/opt/homebrew/opt/libogg/include,
+					/opt/homebrew/opt/libvorbis/include,
+					/opt/homebrew/opt/libsndfile/include,
 					"$(HEADER_SEARCH_PATHS)",
 					/usr/include/libxml2,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					/opt/homebrew/lib,
+					"$(LIBRARY_SEARCH_PATHS)",
 				);
 				OTHER_CFLAGS = (
 					"-D",
@@ -480,7 +496,21 @@
 					"-fpermissive",
 				);
 				OTHER_LDFLAGS = (
+					"-lSDL",
+					"-lSDL2",
+					"-lSDLmain",
+					"-lSDL2main",
+					"-lSDL_gfx",
+					"-lSDL2_ttf",
+					"-lFLAC",
 					"-lcrypto",
+					"-lvorbis",
+					"-lvorbisfile",
+					"-lvorbisenc",
+					"-logg",
+					"-lsndfile",
+					"-lnettle",
+					"-llo",
 					"-lxml2",
 				);
 				PREBINDING = NO;
@@ -492,13 +522,8 @@
 		C01FCF5008A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					i386,
-					ppc,
-				);
+				ARCHS = arm64;
 				FRAMEWORK_SEARCH_PATHS = (
-					"$(HOME)/Library/Frameworks",
-					/Library/Frameworks,
 					"$(FRAMEWORK_SEARCH_PATHS)",
 				);
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -506,11 +531,18 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					/Library/Frameworks/Jackmp.framework/Headers,
-					"$(HOME)/Library/Frameworks/SDL.framework/Headers",
-					/Library/Frameworks/SDL.framework/Headers,
+					"$(PROJECT_DIR)/../src",
+					/opt/homebrew/include,
+					/opt/homebrew/include/SDL,
+					/opt/homebrew/opt/libogg/include,
+					/opt/homebrew/opt/libvorbis/include,
+					/opt/homebrew/opt/libsndfile/include,
 					"$(HEADER_SEARCH_PATHS)",
 					/usr/include/libxml2,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					/opt/homebrew/lib,
+					"$(LIBRARY_SEARCH_PATHS)",
 				);
 				OTHER_CFLAGS = (
 					"-D",
@@ -518,7 +550,21 @@
 					"-fpermissive",
 				);
 				OTHER_LDFLAGS = (
+					"-lSDL",
+					"-lSDL2",
+					"-lSDLmain",
+					"-lSDL2main",
+					"-lSDL_gfx",
+					"-lSDL2_ttf",
+					"-lFLAC",
 					"-lcrypto",
+					"-lvorbis",
+					"-lvorbisfile",
+					"-lvorbisenc",
+					"-logg",
+					"-lsndfile",
+					"-lnettle",
+					"-llo",
 					"-lxml2",
 				);
 				PREBINDING = NO;

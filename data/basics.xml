@@ -60,7 +60,7 @@
 
 <!-- Enable/disable software monitoring per input. Y for software monitoring, N for no monitoring
      (must be done in hardware/alsa/jack). -->
-  <var audioinputmonitoring="NNNN"/>
+  <var audioinputmonitoring="YYYY"/>
   
 <!-- Which audio inputs to stream to disk when streaming is enabled? For each input, Y enables streaming, N disables. -->
   <var streaminputs="NYYN"/>
