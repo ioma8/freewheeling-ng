@@ -107,7 +107,7 @@ void AudioBuffers::MixInputs(nframes_t len, sample_t **dest, InputSettings *iset
       const sample_t dcofs0 = iset->insavg[0][i];
       for (nframes_t idx = 0; idx < len; idx++) {
         const sample_t s = in0[idx];
-        const sample_t sabs = fabs(s);
+        const sample_t sabs = fabsf(s);
         sum0 += s;
         if (sabs > peak) {
           peak = sabs;
@@ -132,7 +132,7 @@ void AudioBuffers::MixInputs(nframes_t len, sample_t **dest, InputSettings *iset
         const sample_t dcofs1 = iset->insavg[1][i];
         for (nframes_t idx = 0; idx < len; idx++) {
           const sample_t s = in1[idx];
-          const sample_t sabs = fabs(s);
+          const sample_t sabs = fabsf(s);
           sum1 += s;
           if (sabs > peak) {
             peak = sabs;
