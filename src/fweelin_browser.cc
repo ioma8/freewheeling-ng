@@ -317,7 +317,7 @@ char Browser::GetDisplayName(const char *filename,
     // Compute default name
     char hashshort_1 = 'X',
       hashshort_2 = 'X';
-    Saveable::GetHashFirst(filename,baselen,&hashshort_1,&hashshort_2);
+    Saveable::GetHashFirst(filename,(int) baselen,&hashshort_1,&hashshort_2);
     
     // Compose name for item
     snprintf(outbuf,maxlen,"%c%c %s",hashshort_1,hashshort_2,ctime(filetime));
@@ -1115,4 +1115,3 @@ void FloDisplaySnapshots::ItemRenamed(char *nw) {
     renamer = 0;
   }
 };
-

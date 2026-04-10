@@ -117,7 +117,7 @@ static int CopyFileContents(const char *src, const char *dst) {
 // Copies configuration file 'cfgname' from shared to ~/.fweelin
 // If copyall is set, copies *all* .XML files from shared to ~/.fweelin
 // Backups are made if needed
-void FloConfig::CopyConfigFile (char *cfgname, char copyall) {
+void FloConfig::CopyConfigFile (const char *cfgname, char copyall) {
   char buf[CFG_PATH_MAX];
   char *homedir = getenv("HOME");
 
@@ -174,7 +174,7 @@ void FloConfig::CopyConfigFile (char *cfgname, char copyall) {
   }
 };
 
-char *FloConfig::PrepareLoadConfigFile (char *cfgname, char basecfg, char quiet) {
+char *FloConfig::PrepareLoadConfigFile (const char *cfgname, char basecfg, char quiet) {
   static char buf[CFG_PATH_MAX];
   char *homedir = getenv("HOME");
 
@@ -550,7 +550,7 @@ char *InputMatrix::RemoveSpaces (char *str) {
   char *curptr = str;
   while (*curptr == ' ')
     curptr++;
-  int n = strlen(str)-1;
+  int n = (int) strlen(str) - 1;
   while (n > 0 && str[n] == ' ') {
     str[n] = '\0';
     n--;
@@ -589,13 +589,13 @@ SDLKeyList *InputMatrix::AddOneKey (SDLKeyList *first, char *str) {
 // of the keysyms (named keys are separated by ,)
 SDLKeyList *InputMatrix::ExtractKeys (char *str) {
   char buf[255]; // Copy buf
-  char *delim = ","; 
+  const char *delim = ",";
 
   // Go through list of keys specified:
   char *cur = strpbrk(str,delim);
   int firstopidx;
   if (cur != 0) 
-    firstopidx = (long)cur-(long)str;
+    firstopidx = (int) (cur - str);
   else
     firstopidx = -1;
   
@@ -739,10 +739,10 @@ void InputMatrix::CreateParameterSets (int interfaceid,
   const static char *delim = " and ";
 
   const static char *str_base = "parameters";
-  int str_len = strlen(str_base)+4;
+  size_t str_len = strlen(str_base)+4;
   char basebuf[str_len];
   if (contnum == 0)
-    sprintf(basebuf,"%s",str_base);
+    snprintf(basebuf,str_len,"%s",str_base);
   else 
     snprintf(basebuf,str_len,"%s%d",str_base,contnum);
 
@@ -762,7 +762,7 @@ void InputMatrix::CreateParameterSets (int interfaceid,
     do {
       nextp = strstr(curp,delim);
 
-      int len = (nextp == 0 ? strlen(curp) : (int) (nextp-curp));
+      int len = (nextp == 0 ? (int) strlen(curp) : (int) (nextp-curp));
       strncpy(buf,curp,buf_len);
       buf[len] = '\0';
 
@@ -939,7 +939,7 @@ int InputMatrix::CreateConditions (int interfaceid,
     do {
       nextc = strstr(curc,delim);
 
-      int len = (nextc == 0 ? strlen(curc) : (int) (nextc-curc));
+      int len = (nextc == 0 ? (int) strlen(curc) : (int) (nextc-curc));
       strncpy(buf,curc,buf_len);
       buf[len] = '\0';
 
@@ -1189,10 +1189,10 @@ void InputMatrix::CreateBinding (int interfaceid, xmlNode *binding) {
         char go = 1, first = 1;
         do { 
           const static char *str_base = "output";
-          int str_len = strlen(str_base)+4;
+          size_t str_len = strlen(str_base)+4;
           char buf[str_len];
           if (contnum == 0)
-            sprintf(buf,"%s",str_base);
+            snprintf(buf,str_len,"%s",str_base);
           else 
             snprintf(buf,str_len,"%s%d",str_base,contnum);
 
@@ -1326,7 +1326,7 @@ void InputMatrix::ParseToken(char *str, CfgToken *dst, Event *ref,
   }
 
   // No matches to variables or parameters, interpret as static token
-  char *ascii_scalar = " 0123456789.>,";
+  const char *ascii_scalar = " 0123456789.>,";
   if (strlen(str) > 0 && strpbrk(str,ascii_scalar) != str) {
     // Wait a second, this isn't a scalar, it probably has letters!
     printf(FWEELIN_ERROR_COLOR_ON
@@ -1386,7 +1386,7 @@ ParsedExpression *InputMatrix::ParseExpression(char *str, Event *ref,
   // Find the first occurance of an operator in string str
   char *cur = strpbrk(str,opstr);
   if (cur != 0) 
-    firstopidx = (long)cur-(long)str;
+    firstopidx = (int) (cur - str);
   else
     firstopidx = -1;
   
@@ -2481,7 +2481,7 @@ void FloConfig::ConfigurePatchBanks(xmlNode *pb, PatchBrowser *br) {
         xmlDocPtr pb_doc;
 
         // Try both ~/.fweelin and fweelin data dir
-        char *buf = PrepareLoadConfigFile((char *) pb_patches,0);
+        char *buf = PrepareLoadConfigFile((const char *) pb_patches,0);
 
         // Load and parse
         pb_doc = (buf == 0 ? 0 : xmlParseFile(buf));
@@ -2763,7 +2763,8 @@ FloDisplay *FloConfig::SetupParamSet(xmlDocPtr doc, xmlNode *paramset, int inter
   printf("(parameter set) ");
 
   // Param set name
-  char *name = "NONAME";
+  char default_name[] = "NONAME";
+  char *name = default_name;
   char ps_named = 0;
   xmlChar *nn = xmlGetProp(paramset, (const xmlChar *)"name");
   if (nn != 0) {
@@ -3531,7 +3532,7 @@ UserVariable *FloConfig::AddEmptyVariable(char *name) {
 
 // Makes the given variable into a system variable by linking it to
 // the pointer
-void FloConfig::LinkSystemVariable(char *name, CoreDataType type, char *ptr) {
+void FloConfig::LinkSystemVariable(const char *name, CoreDataType type, char *ptr) {
   UserVariable *cur = im.vars;
   while (cur != 0) {
     if (cur->name != 0) {
@@ -3687,7 +3688,7 @@ void FloConfig::ConfigureInterfaces (xmlDocPtr /*doc*/, xmlNode *ifs,
       if (n != 0) {
         printf("INIT: Load interface '%s' [%s]\n",(char *) n,
                (firstpass ? "first pass" : "second pass"));
-        char *buf = PrepareLoadConfigFile((char *) n,0,1);
+        char *buf = PrepareLoadConfigFile((const char *) n,0,1);
 
         xmlSubstituteEntitiesDefault(1);
         xmlDocPtr doc = (buf == 0 ? 0 : xmlParseFile(buf));

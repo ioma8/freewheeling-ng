@@ -88,7 +88,7 @@ enum LoopStatus {
   { \
     char *ptr = hashtext; \
     for (int i = 0; i < SAVEABLE_HASH_LENGTH; i++, ptr += 2) \
-      sprintf(ptr,"%02X",s[i]); \
+      snprintf(ptr,3,"%02X",s[i]); \
     *ptr = '\0'; \
   }
 
@@ -149,7 +149,7 @@ class Saveable {
   // num_exts is the size of the list
   //
   // This is for renaming an item on disk
-  static void RenameSaveable(char **filename_ptr, int baselen, char *newname,
+  static void RenameSaveable(char **filename_ptr, int baselen, const char *newname,
                              const char **exts, int num_exts);
 
   // Renames -this- saveable object on disk to correspond with the new name
@@ -161,8 +161,8 @@ class Saveable {
   //
   // *Old_filename and *new_filename are set to point to the old and new
   // filename-- you must delete[] the memory that is allocated for these
-  void RenameSaveable(char *librarypath, char *basename, 
-                      char *old_objname, char *nw_objname,
+  void RenameSaveable(const char *librarypath, const char *basename,
+                      const char *old_objname, const char *nw_objname,
                       const char **exts, int num_exts,
                       char **old_filename, char **new_filename);
 

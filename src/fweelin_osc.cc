@@ -139,7 +139,7 @@ void OSCClient::SendPlayingLoops() {
                   buf,(int) l->nbeats,lc,cflen,len,gain);
 
               // Fill pattern with reps
-              int nbeats = (l->pulse != 0 && l->nbeats > 0 ? l->nbeats : lc);  // Only 1 rep if there is no pulse
+              int nbeats = (l->pulse != 0 && l->nbeats > 0 ? (int) l->nbeats : lc);  // Only 1 rep if there is no pulse
               nframes_t curstart = 0;
 
               for (int reps = 0; reps < lc; reps += nbeats, curstart += app->getLOOPMGR()->GetRoundedLength(i)) {

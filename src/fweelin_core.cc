@@ -205,7 +205,7 @@ char Saveable::SplitFilename(const char *filename, int baselen, char *basename,
     if (objname != 0) {
       if (slashptr2 != 0) {
         // Name
-        len = strlen(slashptr2+1) - strlen(extptr);
+        len = (int) (strlen(slashptr2+1) - strlen(extptr));
         len = MIN(len,maxlen-1);
         memcpy(objname,slashptr2+1,sizeof(char)*len);
         objname[len] = '\0';
@@ -221,8 +221,8 @@ char Saveable::SplitFilename(const char *filename, int baselen, char *basename,
   return 0;
 };
 
-void Saveable::RenameSaveable(char **filename_ptr, int baselen, 
-                              char *newname, const char **exts, int num_exts) {
+void Saveable::RenameSaveable(char **filename_ptr, int baselen,
+                              const char *newname, const char **exts, int num_exts) {
   // Parse filename to extract hash part
   char fn_base[FWEELIN_OUTNAME_LEN], 
     fn_hash[FWEELIN_OUTNAME_LEN],
@@ -270,8 +270,8 @@ void Saveable::RenameSaveable(char **filename_ptr, int baselen,
 
 // This is for renaming an item in memory, so that the disk corresponds
 // with the new name
-void Saveable::RenameSaveable(char *librarypath, char *basename, 
-                              char *old_objname, char *nw_objname,
+void Saveable::RenameSaveable(const char *librarypath, const char *basename,
+                              const char *old_objname, const char *nw_objname,
                               const char **exts, int num_exts,
                               char **old_filename, char **new_filename) {
   if (savestatus == SAVE_DONE) {
@@ -501,7 +501,7 @@ void LoopManager::ItemRenamed(BrowserItem *item) {
   case B_Loop:
     {
       // Name change on disk
-      int baselen = strlen(app->getCFG()->GetLibraryPath()) + 1 +
+      int baselen = (int) strlen(app->getCFG()->GetLibraryPath()) + 1 +
         strlen(FWEELIN_OUTPUT_LOOP_NAME);
 
       // Add all audio format names + XML to extension list
@@ -547,7 +547,7 @@ void LoopManager::ItemRenamed(BrowserItem *item) {
     
   case B_Scene:
     {
-      int baselen = strlen(app->getCFG()->GetLibraryPath()) + 1 +
+      int baselen = (int) strlen(app->getCFG()->GetLibraryPath()) + 1 +
         strlen(FWEELIN_OUTPUT_SCENE_NAME);
       const static char *exts[] = {FWEELIN_OUTPUT_DATA_EXT};
       
@@ -1376,7 +1376,7 @@ int LoopManager::SetupLoadLoop(FILE **in, char *smooth_end, Loop **new_loop,
       // Extract hash from filename
       char fn_hash[FWEELIN_OUTNAME_LEN],
         loopname[FWEELIN_OUTNAME_LEN];
-      int baselen = strlen(app->getCFG()->GetLibraryPath()) + 1 +
+      int baselen = (int) strlen(app->getCFG()->GetLibraryPath()) + 1 +
         strlen(FWEELIN_OUTPUT_LOOP_NAME);
       if (!Saveable::SplitFilename(data.name.c_str(),baselen,0,fn_hash,loopname,
                                    FWEELIN_OUTNAME_LEN)) {

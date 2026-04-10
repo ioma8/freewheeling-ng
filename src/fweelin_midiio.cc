@@ -105,13 +105,13 @@ char MidiIO::open_midi (int num_in, int num_out) {
   }
     
   // Make list of input sources
-  int n = MIDIGetNumberOfSources();
-  printf("MIDI: Input possible from %d sources.\n", n);
+  ItemCount n = MIDIGetNumberOfSources();
+  printf("MIDI: Input possible from %lu sources.\n", (unsigned long) n);
   CFStringRef endname;
   char cendname[1024];
   
   FweelinMac::ClearMIDIInputList();
-  for (int i = 0; i < n; ++i) {
+  for (ItemCount i = 0; i < n; ++i) {
     MIDIEndpointRef src = MIDIGetSource(i);
     MIDIObjectGetStringProperty(src, kMIDIPropertyName, &endname);
     CFStringGetCString(endname, cendname, 1024, kCFStringEncodingUTF8);
@@ -242,7 +242,7 @@ void MidiIO::MidiInputProc (const MIDIPacketList *pktlist, void *refCon, void *c
       // Pitch Bend
       int lsb = packet->data[1],
         msb = packet->data[2],
-        benderval = msb << 8 + lsb;
+        benderval = (msb << 8) + lsb;
       
       inst->ReceivePitchBendEvent(packet->data[0] - 0xE0,
                                   benderval);

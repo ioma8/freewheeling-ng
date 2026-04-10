@@ -88,10 +88,10 @@ int SndFileDecoder::ReadSamples(AudioBlockIterator *it, nframes_t max_len) {
 
   if (stereo) {    
     if (filetype == FLAC){ // need to convert from int24
-      len = sf_read_float(sfinfd,rbuf,sfinfo.channels*max_len);
+      len = (int) sf_read_float(sfinfd,rbuf,sfinfo.channels*max_len);
       len /= sfinfo.channels;
     } else { // everything else is currently native float
-      len = sf_read_raw(sfinfd,rbuf,sfinfo.channels*max_len*samplesize);
+      len = (int) sf_read_raw(sfinfd,rbuf,sfinfo.channels*max_len*samplesize);
       len /= (sfinfo.channels *samplesize);
     }
     for (nframes_t i = 0; i < max_len; i++) { // deinterleave channels using brute strength
@@ -105,9 +105,9 @@ int SndFileDecoder::ReadSamples(AudioBlockIterator *it, nframes_t max_len) {
 
   } else {
     if (filetype == FLAC) { // need to convert from int24
-      len = sf_read_float(sfinfd,obuf[0],sfinfo.channels*max_len);
+      len = (int) sf_read_float(sfinfd,obuf[0],sfinfo.channels*max_len);
     } else {                // everything else is currently native float
-      len = sf_read_raw(sfinfd,obuf[0],sfinfo.channels*max_len*samplesize);
+      len = (int) sf_read_raw(sfinfd,obuf[0],sfinfo.channels*max_len*samplesize);
     }
     if (len > 0) {
       it->PutFragment(obuf[0],0,len,1);
@@ -168,7 +168,7 @@ int VorbisDecoder::ReadFromFile(FILE *in, nframes_t /*rbuf_len*/) {
 int VorbisDecoder::ReadSamples(AudioBlockIterator *i, nframes_t max_len) {
   int len;
   float **outb;
-  len = ov_read_float(&vf,&outb,max_len,&current_section);
+  len = (int) ov_read_float(&vf,&outb,max_len,&current_section);
   if (len > 0) {
     if (stereo) 
       i->PutFragment(outb[0],outb[1],len,1);
@@ -268,7 +268,7 @@ VorbisEncoder::VorbisEncoder(Fweelin *app, char stereo) : iFileEncoder(app,stere
   /* set up our packet->stream encoder */
   /* pick a random serial number; that way we can more likely build
      chained streams just by concatenation */
-  srand(time(NULL));
+  srand((unsigned int) time(NULL));
   ogg_stream_init(&os,rand());
 };
 

@@ -96,11 +96,11 @@ static NSString *getApplicationName(void)
 {
 	// Toggle debug mode
 	
-	int state = [sender state];
+	NSInteger state = [sender state];
 	state = (state == 0 ? 1 : 0);
 	
 	[sender setState:state];
-	FweelinMac::SetDebugMode(state);
+	FweelinMac::SetDebugMode((int) state);
 }
 
 - (IBAction)quitFW:(id)sender
@@ -116,8 +116,8 @@ static NSString *getApplicationName(void)
 - (IBAction)setMIDIInput:(id)sender
 {
 	// printf("IDX: %d\n",idx);
-	int idx = [sender indexOfSelectedItem];
-	FweelinMac::SetMIDIInput(idx);
+	NSInteger idx = [sender indexOfSelectedItem];
+	FweelinMac::SetMIDIInput((int) idx);
 }
 
 - (void)clearMIDIInputList 
@@ -131,13 +131,9 @@ static NSString *getApplicationName(void)
 }
 
 // Dummy thread to invoke multithreaded mode
-- (void) dummyThread:(id)sender
++ (void) dummyThread:(id)sender
 {
-	while (1) {
-		printf("Dummy thread!\n");
-		sleep(1);
-	}
-	//[NSThread exit];
+	(void) sender;
 }
 
 /* Set the working directory to the .app's parent directory */
@@ -179,7 +175,6 @@ static NSString *getApplicationName(void)
         if ([menuItem hasSubmenu])
             [self fixMenu:[menuItem submenu] withAppName:appName];
     }
-    [ aMenu sizeToFit ];
 }
 
 #else
@@ -387,9 +382,9 @@ static void CustomApplicationMain (int argc, char **argv)
 
 - (NSString *)stringByReplacingRange:(NSRange)aRange with:(NSString *)aString
 {
-    unsigned int bufferSize;
-    unsigned int selfLen = [self length];
-    unsigned int aStringLen = [aString length];
+    NSUInteger bufferSize;
+    NSUInteger selfLen = [self length];
+    NSUInteger aStringLen = [aString length];
     unichar *buffer;
     NSRange localRange;
     NSString *result;
@@ -449,7 +444,7 @@ int main (int argc, char **argv)
     }
 	
 	// Setup multithreaded mode
-	[NSThread detachNewThreadSelector:@selector(dummyThread) toTarget:nil withObject:nil];
+	[NSThread detachNewThreadSelector:@selector(dummyThread:) toTarget:[SDLMain class] withObject:nil];
 	// printf("MULTITHREADED: %d\n",[NSThread isMultiThreaded]);	
 	
 #if SDL_USE_NIB_FILE

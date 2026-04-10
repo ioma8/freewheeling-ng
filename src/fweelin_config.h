@@ -754,12 +754,12 @@ class FloConfig {
 
   // Copy config file from shared folder
   // Optionally copy all config files
-  void CopyConfigFile (char *cfgname, char copyall);
+  void CopyConfigFile (const char *cfgname, char copyall);
 
   // Prepare to load configuration file 'cfgname' 
   // Finds the file in one of several places, and copies it to
   // the config folder. Returns the path name if found, or null if not found
-  char *PrepareLoadConfigFile (char *cfgname, char basecfg, char quiet = 0);
+  char *PrepareLoadConfigFile (const char *cfgname, char basecfg, char quiet = 0);
   
   // Configure bindings between events and their triggers
   void ConfigureEventBindings(xmlDocPtr /*doc*/, xmlNode *events,
@@ -796,7 +796,7 @@ class FloConfig {
 
   // Makes the given variable into a system variable by linking it to
   // the pointer
-  void LinkSystemVariable(char *name, CoreDataType type, char *ptr);
+  void LinkSystemVariable(const char *name, CoreDataType type, char *ptr);
 
   // Input matrix- stores and handles all bindings between inputs and events
   inline InputMatrix *GetInputMatrix() { return &im; };
