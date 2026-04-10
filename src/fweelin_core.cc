@@ -49,6 +49,7 @@
 #include "fweelin_fluidsynth.h"
 #include "fweelin_paramset.h"
 #include "fweelin_looplibrary.h"
+#include "fweelin_startup_guard.h"
 
 const float Loop::MIN_VOL = 0.01;
 PreallocatedType *Loop::loop_pretype = 0;
@@ -77,6 +78,10 @@ void LinkSystemVars(FloConfig *cfg, const SystemVarLink *links, int count) {
   for (int i = 0; i < count; i++)
     cfg->LinkSystemVariable((char *) links[i].name, links[i].type,
                             links[i].ptr);
+}
+
+void RollbackSetupCallback(void *ctx, int /*tag*/) {
+  ((Fweelin *) ctx)->RollbackSetup();
 }
 
 }
@@ -3501,6 +3506,7 @@ long int Fweelin::getSTREAMER_TotalOutputSize(int &numstreams) {
 int Fweelin::setup()
 {
   char tmp[255];
+  FweelinStartupGuard guard;
 
   // Keep all memory inline
   mlockall(MCL_CURRENT | MCL_FUTURE);
@@ -3508,6 +3514,8 @@ int Fweelin::setup()
   // Init and Register main thread as a writer
   RT_RWThreads::InitAll();
   RT_RWThreads::RegisterReaderOrWriter();
+  rt_threads_ready = 1;
+  guard.Push(RollbackSetupCallback, this, 0);
   
   // Initialize vars
   for (int i = 0; i < NUM_LOOP_SELECTION_SETS; i++)
@@ -3528,8 +3536,10 @@ int Fweelin::setup()
   /* (SDL_INIT_JOYSTICK | SDL_INIT_EVENTTHREAD) < 0) { */
   if ( SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0 ) {
     printf("MAIN: ERROR: Can't initialize SDL: %s\n",SDL_GetError());
+    guard.Rollback();
     return 0;
   }
+  sdl_ready = 1;
   atexit(SDL_Quit);
 
   // Memory manager
@@ -3592,6 +3602,7 @@ int Fweelin::setup()
   vid = new VideoIO(this);
   if (vid->activate()) {
     printf("MAIN: ERROR: Can't start video handler!\n");
+    guard.Rollback();
     return 1;
   }
   while (!vid->IsActive())
@@ -3602,6 +3613,7 @@ int Fweelin::setup()
   audio = new AudioIO(this);
   if (audio->open()) {
     printf("MAIN: ERROR: Can't start system level audio!\n");
+    guard.Rollback();
     return 1;
   }  
   fragmentsize = audio->getbufsz();
@@ -3687,7 +3699,8 @@ int Fweelin::setup()
   audiomem = ::new AudioBlock(memlen);
   if (audiomem == 0) {
     printf("CORE: ERROR: Can't create audio memory!\n");
-    exit(1);
+    guard.Rollback();
+    return 1;
   }
   audiomem->Zero();
   // If we are running in stereo, create a custom right channel to match
@@ -3696,7 +3709,8 @@ int Fweelin::setup()
     BED_ExtraChannel *audiomem_r = ::new BED_ExtraChannel(memlen);
     if (audiomem_r == 0) {
       printf("CORE: ERROR: Can't create audio memory (right channel)!\n");
-      exit(1);
+      guard.Rollback();
+      return 1;
     }
     
     audiomem->AddExtendedData(audiomem_r);
@@ -3713,7 +3727,10 @@ int Fweelin::setup()
     *avgs = ::new AudioBlock(scopelen);
   if (peaks == 0 || avgs == 0) {
     printf("CORE: ERROR: Can't create peaks/averages memory!\n");
-    exit(1);
+    delete peaks;
+    delete avgs;
+    guard.Rollback();
+    return 1;
   }
   peaks->Zero();
   avgs->Zero();
@@ -3760,10 +3777,12 @@ int Fweelin::setup()
 
   if (sdlio->activate()) {
     printf("(start) cant start keyboard handler\n");
+    guard.Rollback();
     return 1;
   }
   if (midi->activate()) {
     printf("(start) cant start midi\n");
+    guard.Rollback();
     return 1;
   }
   
@@ -3843,6 +3862,7 @@ int Fweelin::setup()
   // Now start signal processing
   if (audio->activate(rp)) {
     printf("MAIN: Error with signal processing start!\n");
+    guard.Rollback();
     return 1;
   }
 
@@ -3905,12 +3925,124 @@ int Fweelin::setup()
                               cfg->IsStereoMaster());
   if (amrec == 0) {
     printf("CORE: ERROR: Can't create core RecordProcessor!\n");
-    exit(1);
+    guard.Rollback();
+    return 1;
   }
   bmg->PeakAvgOn(audiomem,amrec->GetIterator());
   rp->AddChild(amrec,ProcessorItem::TYPE_HIPRIORITY);
 
+  guard.Release();
   return 0;
+}
+
+void Fweelin::RollbackSetup() {
+  if (vid != 0) {
+    vid->close();
+    delete vid;
+    vid = 0;
+  }
+
+  if (sdlio != 0) {
+    sdlio->close();
+    delete sdlio;
+    sdlio = 0;
+  }
+
+  if (midi != 0) {
+    midi->close();
+    delete midi;
+    midi = 0;
+  }
+
+  if (audio != 0) {
+    audio->close();
+    delete audio;
+    audio = 0;
+  }
+
+  delete hmix;
+  hmix = 0;
+
+  delete iset;
+  iset = 0;
+
+  delete abufs;
+  abufs = 0;
+
+  delete[] snaps;
+  snaps = 0;
+
+  delete[] fs_inputs;
+  fs_inputs = 0;
+  fs_finalout = 0;
+  fs_loopout = 0;
+
+#ifndef __MACOSX__
+  delete osc;
+  osc = 0;
+#endif
+
+#if USE_FLUIDSYNTH
+  delete fluidp;
+  fluidp = 0;
+#endif
+
+  delete[] browsers;
+  browsers = 0;
+
+  if (amrec != 0 && bmg != 0 && audiomem != 0) {
+    getAMPEAKS()->SetupPreallocated(0,Preallocated::PREALLOC_BASE_INSTANCE);
+    getAMAVGS()->SetupPreallocated(0,Preallocated::PREALLOC_BASE_INSTANCE);
+  }
+  if (audiomem != 0)
+    audiomem->SetupPreallocated(0,Preallocated::PREALLOC_BASE_INSTANCE);
+
+  delete tmap;
+  tmap = 0;
+
+  delete loopmgr;
+  loopmgr = 0;
+
+  delete rp;
+  rp = 0;
+  masterlimit = 0;
+  amrec = 0;
+
+  delete bmg;
+  bmg = 0;
+
+  delete audiomem;
+  audiomem = 0;
+
+  delete[] scope;
+  scope = 0;
+  scope_len = 0;
+
+  delete pre_audioblock;
+  pre_audioblock = 0;
+  delete pre_extrachannel;
+  pre_extrachannel = 0;
+  delete pre_timemarker;
+  pre_timemarker = 0;
+
+  delete cfg;
+  cfg = 0;
+
+  delete emg;
+  emg = 0;
+
+  delete mmg;
+  mmg = 0;
+
+  if (sdl_ready) {
+    SDL_Quit();
+    sdl_ready = 0;
+  }
+
+  if (rt_threads_ready) {
+    RT_RWThreads::CloseAll();
+    rt_threads_ready = 0;
+  }
 }
 
 void Fweelin::ItemSelected (BrowserItem *item) {

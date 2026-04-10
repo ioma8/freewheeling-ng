@@ -484,6 +484,8 @@ static int DumpStack(char *format, ...)
 
 /*************************************************************************
  * StackTrace
+ *
+ * Not async-signal-safe. Call only from a normal process context.
  */
 void StackTrace(char *gdb_command_file)
 {
@@ -757,6 +759,15 @@ void StackTrace(char *gdb_command_file)
 #elif defined(PLATFORM_WIN32)
   /* Use StackWalk() */
 #endif // defined(PLATFORM_UNIX)
+}
+
+int StackTraceFromSafeContext(const char *gdb_command_file)
+{
+  if (gdb_command_file == NULL)
+    return 0;
+
+  StackTrace((char *) gdb_command_file);
+  return 1;
 }
 
 /*************************************************************************

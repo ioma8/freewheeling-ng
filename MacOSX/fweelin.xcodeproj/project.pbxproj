@@ -49,9 +49,12 @@
 		AC5A53F50AC09A6400622F72 /* fweelin_config.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53D90AC09A6400622F72 /* fweelin_config.cc */; };
 		AC5A53F70AC09A6400622F72 /* fweelin_core_dsp.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53DB0AC09A6400622F72 /* fweelin_core_dsp.cc */; };
 		AC5A53F90AC09A6400622F72 /* fweelin_core.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53DD0AC09A6400622F72 /* fweelin_core.cc */; };
+		D4A100010C0D000100000001 /* fweelin_startup_guard.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A100020C0D000100000001 /* fweelin_startup_guard.cc */; };
 		AC5A53FB0AC09A6400622F72 /* fweelin_datatypes.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53DF0AC09A6400622F72 /* fweelin_datatypes.cc */; };
 		AC5A53FD0AC09A6400622F72 /* fweelin_event.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E10AC09A6400622F72 /* fweelin_event.cc */; };
 		AC5A53FF0AC09A6400622F72 /* fweelin_fluidsynth.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E30AC09A6400622F72 /* fweelin_fluidsynth.cc */; };
+		D4A100040C0D000100000001 /* fweelin_signal.c in Sources */ = {isa = PBXBuildFile; fileRef = D4A100050C0D000100000001 /* fweelin_signal.c */; };
+		D4A100070C0D000100000001 /* fweelin_processor_queue.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A100080C0D000100000001 /* fweelin_processor_queue.cc */; };
 		AC5A54020AC09A6400622F72 /* fweelin_mem.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E60AC09A6400622F72 /* fweelin_mem.cc */; };
 		AC5A54040AC09A6400622F72 /* fweelin_midiio.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E80AC09A6400622F72 /* fweelin_midiio.cc */; };
 		B1A001040AC09A6400622F72 /* fweelin_paramset.cc in Sources */ = {isa = PBXBuildFile; fileRef = B1A001050AC09A6400622F72 /* fweelin_paramset.cc */; };
@@ -142,12 +145,18 @@
 		AC5A53DC0AC09A6400622F72 /* fweelin_core_dsp.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_core_dsp.h; path = ../src/fweelin_core_dsp.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DD0AC09A6400622F72 /* fweelin_core.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core.cc; path = ../src/fweelin_core.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DE0AC09A6400622F72 /* fweelin_core.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_core.h; path = ../src/fweelin_core.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100020C0D000100000001 /* fweelin_startup_guard.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_startup_guard.cc; path = ../src/fweelin_startup_guard.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100030C0D000100000001 /* fweelin_startup_guard.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_startup_guard.h; path = ../src/fweelin_startup_guard.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DF0AC09A6400622F72 /* fweelin_datatypes.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_datatypes.cc; path = ../src/fweelin_datatypes.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E00AC09A6400622F72 /* fweelin_datatypes.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_datatypes.h; path = ../src/fweelin_datatypes.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E10AC09A6400622F72 /* fweelin_event.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_event.cc; path = ../src/fweelin_event.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E20AC09A6400622F72 /* fweelin_event.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_event.h; path = ../src/fweelin_event.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E30AC09A6400622F72 /* fweelin_fluidsynth.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_fluidsynth.cc; path = ../src/fweelin_fluidsynth.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E40AC09A6400622F72 /* fweelin_fluidsynth.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_fluidsynth.h; path = ../src/fweelin_fluidsynth.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100050C0D000100000001 /* fweelin_signal.c */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = fweelin_signal.c; path = ../src/fweelin_signal.c; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100060C0D000100000001 /* fweelin_signal.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_signal.h; path = ../src/fweelin_signal.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100080C0D000100000001 /* fweelin_processor_queue.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_processor_queue.cc; path = ../src/fweelin_processor_queue.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100090C0D000100000001 /* fweelin_processor_queue.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_processor_queue.h; path = ../src/fweelin_processor_queue.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E50AC09A6400622F72 /* fweelin_logo.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_logo.h; path = ../src/fweelin_logo.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E60AC09A6400622F72 /* fweelin_mem.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_mem.cc; path = ../src/fweelin_mem.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E70AC09A6400622F72 /* fweelin_mem.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_mem.h; path = ../src/fweelin_mem.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
@@ -200,12 +209,18 @@
 				AC5A53DC0AC09A6400622F72 /* fweelin_core_dsp.h */,
 				AC5A53DD0AC09A6400622F72 /* fweelin_core.cc */,
 				AC5A53DE0AC09A6400622F72 /* fweelin_core.h */,
+				D4A100020C0D000100000001 /* fweelin_startup_guard.cc */,
+				D4A100030C0D000100000001 /* fweelin_startup_guard.h */,
 				AC5A53DF0AC09A6400622F72 /* fweelin_datatypes.cc */,
 				AC5A53E00AC09A6400622F72 /* fweelin_datatypes.h */,
 				AC5A53E10AC09A6400622F72 /* fweelin_event.cc */,
 				AC5A53E20AC09A6400622F72 /* fweelin_event.h */,
 				AC5A53E30AC09A6400622F72 /* fweelin_fluidsynth.cc */,
 				AC5A53E40AC09A6400622F72 /* fweelin_fluidsynth.h */,
+				D4A100080C0D000100000001 /* fweelin_processor_queue.cc */,
+				D4A100090C0D000100000001 /* fweelin_processor_queue.h */,
+				D4A100050C0D000100000001 /* fweelin_signal.c */,
+				D4A100060C0D000100000001 /* fweelin_signal.h */,
 				AC5A53E50AC09A6400622F72 /* fweelin_logo.h */,
 				AC5A53E60AC09A6400622F72 /* fweelin_mem.cc */,
 				AC5A53E70AC09A6400622F72 /* fweelin_mem.h */,
@@ -406,9 +421,12 @@
 				AC5A53F50AC09A6400622F72 /* fweelin_config.cc in Sources */,
 				AC5A53F70AC09A6400622F72 /* fweelin_core_dsp.cc in Sources */,
 				AC5A53F90AC09A6400622F72 /* fweelin_core.cc in Sources */,
+				D4A100010C0D000100000001 /* fweelin_startup_guard.cc in Sources */,
 				AC5A53FB0AC09A6400622F72 /* fweelin_datatypes.cc in Sources */,
 				AC5A53FD0AC09A6400622F72 /* fweelin_event.cc in Sources */,
 				AC5A53FF0AC09A6400622F72 /* fweelin_fluidsynth.cc in Sources */,
+				D4A100070C0D000100000001 /* fweelin_processor_queue.cc in Sources */,
+				D4A100040C0D000100000001 /* fweelin_signal.c in Sources */,
 				AC5A54020AC09A6400622F72 /* fweelin_mem.cc in Sources */,
 				AC5A54040AC09A6400622F72 /* fweelin_midiio.cc in Sources */,
 				B1A001040AC09A6400622F72 /* fweelin_paramset.cc in Sources */,

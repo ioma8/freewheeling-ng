@@ -44,6 +44,7 @@ extern "C" {
 
 void StackTrace(char *gdb_command_file);
 void StackTraceInit(const char *progname, int handle);
+int StackTraceFromSafeContext(const char *gdb_command_file);
 
 #if defined(__cplusplus)
 }

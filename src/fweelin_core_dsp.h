@@ -23,6 +23,7 @@
 
 #include "fweelin_core.h"
 #include "fweelin_event.h"
+#include "fweelin_processor_queue.h"
 #include "fweelin_block.h"
 
 #ifndef MIN
@@ -580,8 +581,7 @@ private:
 
   // Event queue (read in RT). Used to handle events in the RT audio thread, that are generated from multiple
   // writers in other threads.
-  SRMWRingBuffer<Event *> *eq;
-  volatile char protect_plist;  // Nonzero if the processor list is being read and SHOULD NOT be modified
+  ProcessorCommandQueue *processor_commands;
 
   // Volumes- we are responsible for adjusting volumes in RT
   InputSettings *iset;

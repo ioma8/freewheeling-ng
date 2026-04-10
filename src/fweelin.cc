@@ -44,6 +44,7 @@
 #include <sys/mman.h>
 
 #include "stacktrace.h"
+#include "fweelin_signal.h"
 
 #include "fweelin_midiio.h"
 #include "fweelin_videoio.h"
@@ -53,75 +54,38 @@
 #include "fweelin_core.h"
 #include "fweelin_core_dsp.h"
 
-pid_t main_pid;
+static void ignore_signal_handler(int /*sig*/) {
+}
 
-void signal_handler (int iSignal) {
-  switch (iSignal) {
-    case SIGINT:
-      return;
-    #if defined(WIN32)
-    #else
-    case SIGSEGV:
-      printf(">>> FATAL ERROR: Segmentation fault (SIGSEGV) occured! <<<\n");
-      break;
-    case SIGBUS:
-      printf(">>> FATAL ERROR: Access to undefined portion of a memory object (SIGBUS) occured! <<<\n");
-      break;
-    case SIGILL:
-      printf(">>> FATAL ERROR: Illegal instruction (SIGILL) occured! <<<\n");
-      break;
-    case SIGFPE:
-      printf(">>> FATAL ERROR: Erroneous arithmetic operation (SIGFPE) occured! <<<\n");
-      break;
-    case SIGUSR1:
-      printf(">>> User defined signal 1 (SIGUSR1) received <<<\n");
-      break;
-    case SIGUSR2:
-      printf(">>> User defined signal 2 (SIGUSR2) received <<<\n");
-      break;
-    #endif
-    default: { // this should never happen, as we register for the signals we want
-      printf(">>> FATAL ERROR: Unknown signal received! <<<\n");
-      break;
-    }
-  }
-  signal(iSignal, SIG_DFL); // Reinstall default handler to prevent race conditions
-  printf("Saving stack trace to file 'fweelin-stackdump'...\n");
-  
-  char buf[256];
-  snprintf(buf,255,"%s%s",FWEELIN_DATADIR,"/gdb-stackdump-cmds");
-  StackTrace(buf);
-  
-  sleep(10);
-  printf("Exit Freewheeling...\n");
-  // Use abort() if we want to generate a core dump.
-  kill(main_pid, SIGKILL);
+static void info_signal_handler(int sig) {
+  fweelin_log_nonfatal_signal(sig);
 }
 
 
 #ifndef NO_COMPILE_MAIN
 int main (int /*argc*/, char *argv[]) {
-#if !defined(WIN32)
-  main_pid = getpid();
-#endif // WIN32
-
   // Initialize the stack trace mechanism 
   StackTraceInit(argv[0], -1);
 
-  signal(SIGINT, signal_handler);
+  signal(SIGINT, ignore_signal_handler);
 
 #if !defined(WIN32)
   // Register signal handlers
-  struct sigaction sact;
-  sigemptyset(&sact.sa_mask);
-  sact.sa_flags   = 0;
-  sact.sa_handler = signal_handler;
-  sigaction(SIGSEGV, &sact, NULL);
-  sigaction(SIGBUS,  &sact, NULL);
-  sigaction(SIGILL,  &sact, NULL);
-  sigaction(SIGFPE,  &sact, NULL);
-  sigaction(SIGUSR1, &sact, NULL);
-  sigaction(SIGUSR2, &sact, NULL);
+  struct sigaction fatal_sact;
+  sigemptyset(&fatal_sact.sa_mask);
+  fatal_sact.sa_flags = 0;
+  fatal_sact.sa_handler = fweelin_fatal_signal_handler;
+  sigaction(SIGSEGV, &fatal_sact, NULL);
+  sigaction(SIGBUS,  &fatal_sact, NULL);
+  sigaction(SIGILL,  &fatal_sact, NULL);
+  sigaction(SIGFPE,  &fatal_sact, NULL);
+
+  struct sigaction info_sact;
+  sigemptyset(&info_sact.sa_mask);
+  info_sact.sa_flags = 0;
+  info_sact.sa_handler = info_signal_handler;
+  sigaction(SIGUSR1, &info_sact, NULL);
+  sigaction(SIGUSR2, &info_sact, NULL);
 #endif // WIN32
 
   Fweelin flo;

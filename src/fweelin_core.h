@@ -924,10 +924,14 @@ class Fweelin : public EventProducer, public BrowserCallback {
     fluidp(0), 
 #endif
 
-    mmg(0), bmg(0), emg(0), rp(0), tmap(0), 
-    loopmgr(0), browsers(0), abufs(0), iset(0), audio(0), midi(0), sdlio(0), 
-    vid(0), scope(0), scope_len(0), audiomem(0), amrec(0),  
-    sync_type(0), sync_speed(1), running(0) {};
+    osc(0), mmg(0), bmg(0), emg(0), rp(0), tmap(0),
+    loopmgr(0), browsers(0), pre_audioblock(0), pre_extrachannel(0),
+    pre_timemarker(0), fs_finalout(0), fs_loopout(0), fs_inputs(0),
+    writenum(0), masterlimit(0), snaps(0), curscene(0), abufs(0), iset(0),
+    audio(0), midi(0), sdlio(0), vid(0), fragmentsize(0), scope(0),
+    scope_len(0), audiomem(0), amrec(0), cfg(0), hmix(0),
+    sync_type(0), sync_speed(1), running(0), sdl_ready(0),
+    rt_threads_ready(0) {};
   ~Fweelin() {};
 
   char IsRunning() { return running; };
@@ -1008,6 +1012,7 @@ class Fweelin : public EventProducer, public BrowserCallback {
   inline InputSettings *getISET() { return iset; };
 
   inline AutoLimitProcessor *getMASTERLIMITER() { return masterlimit; };
+  void RollbackSetup();
 
   inline Browser *getBROWSER(BrowserItemType b) { 
     if (b >= 0 && b < B_Last)
@@ -1179,6 +1184,8 @@ class Fweelin : public EventProducer, public BrowserCallback {
   int sync_speed; // Number of beats or bars (external) per pulse (FW)
   
   char running; // Nonzero if FW is fully started
+  char sdl_ready;
+  char rt_threads_ready;
 };
 
 #endif
