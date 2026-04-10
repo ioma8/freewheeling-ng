@@ -48,6 +48,10 @@
 		AC5A53F30AC09A6400622F72 /* fweelin_browser.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53D70AC09A6400622F72 /* fweelin_browser.cc */; };
 		AC5A53F50AC09A6400622F72 /* fweelin_config.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53D90AC09A6400622F72 /* fweelin_config.cc */; };
 		AC5A53F70AC09A6400622F72 /* fweelin_core_dsp.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53DB0AC09A6400622F72 /* fweelin_core_dsp.cc */; };
+		D4A100100C0D000100000001 /* fweelin_core_dsp_audio_buffers.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A100110C0D000100000001 /* fweelin_core_dsp_audio_buffers.cc */; };
+		D4A100120C0D000100000001 /* fweelin_core_dsp_pulse.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A100130C0D000100000001 /* fweelin_core_dsp_pulse.cc */; };
+		D4A100140C0D000100000001 /* fweelin_core_dsp_root.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A100150C0D000100000001 /* fweelin_core_dsp_root.cc */; };
+		D4A100160C0D000100000001 /* fweelin_dsp_profile.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A100170C0D000100000001 /* fweelin_dsp_profile.cc */; };
 		AC5A53F90AC09A6400622F72 /* fweelin_core.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53DD0AC09A6400622F72 /* fweelin_core.cc */; };
 		D4A1000C0C0D000100000001 /* fweelin_core_persistence.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A1000D0C0D000100000001 /* fweelin_core_persistence.cc */; };
 		D4A1000E0C0D000100000001 /* fweelin_core_startup.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A1000F0C0D000100000001 /* fweelin_core_startup.cc */; };
@@ -144,6 +148,10 @@
 		AC5A53D90AC09A6400622F72 /* fweelin_config.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_config.cc; path = ../src/fweelin_config.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DA0AC09A6400622F72 /* fweelin_config.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_config.h; path = ../src/fweelin_config.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DB0AC09A6400622F72 /* fweelin_core_dsp.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core_dsp.cc; path = ../src/fweelin_core_dsp.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100110C0D000100000001 /* fweelin_core_dsp_audio_buffers.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core_dsp_audio_buffers.cc; path = ../src/fweelin_core_dsp_audio_buffers.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100130C0D000100000001 /* fweelin_core_dsp_pulse.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core_dsp_pulse.cc; path = ../src/fweelin_core_dsp_pulse.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100150C0D000100000001 /* fweelin_core_dsp_root.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core_dsp_root.cc; path = ../src/fweelin_core_dsp_root.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A100170C0D000100000001 /* fweelin_dsp_profile.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_dsp_profile.cc; path = ../src/fweelin_dsp_profile.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DC0AC09A6400622F72 /* fweelin_core_dsp.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_core_dsp.h; path = ../src/fweelin_core_dsp.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DD0AC09A6400622F72 /* fweelin_core.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core.cc; path = ../src/fweelin_core.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		D4A1000D0C0D000100000001 /* fweelin_core_persistence.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core_persistence.cc; path = ../src/fweelin_core_persistence.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
@@ -211,6 +219,10 @@
 				AC5A53D90AC09A6400622F72 /* fweelin_config.cc */,
 				AC5A53DA0AC09A6400622F72 /* fweelin_config.h */,
 				AC5A53DB0AC09A6400622F72 /* fweelin_core_dsp.cc */,
+				D4A100110C0D000100000001 /* fweelin_core_dsp_audio_buffers.cc */,
+				D4A100130C0D000100000001 /* fweelin_core_dsp_pulse.cc */,
+				D4A100150C0D000100000001 /* fweelin_core_dsp_root.cc */,
+				D4A100170C0D000100000001 /* fweelin_dsp_profile.cc */,
 				AC5A53DC0AC09A6400622F72 /* fweelin_core_dsp.h */,
 				AC5A53DD0AC09A6400622F72 /* fweelin_core.cc */,
 				D4A1000D0C0D000100000001 /* fweelin_core_persistence.cc */,
@@ -427,6 +439,10 @@
 				AC5A53F30AC09A6400622F72 /* fweelin_browser.cc in Sources */,
 				AC5A53F50AC09A6400622F72 /* fweelin_config.cc in Sources */,
 				AC5A53F70AC09A6400622F72 /* fweelin_core_dsp.cc in Sources */,
+				D4A100100C0D000100000001 /* fweelin_core_dsp_audio_buffers.cc in Sources */,
+				D4A100120C0D000100000001 /* fweelin_core_dsp_pulse.cc in Sources */,
+				D4A100140C0D000100000001 /* fweelin_core_dsp_root.cc in Sources */,
+				D4A100160C0D000100000001 /* fweelin_dsp_profile.cc in Sources */,
 				AC5A53F90AC09A6400622F72 /* fweelin_core.cc in Sources */,
 				D4A1000C0C0D000100000001 /* fweelin_core_persistence.cc in Sources */,
 				D4A1000E0C0D000100000001 /* fweelin_core_startup.cc in Sources */,

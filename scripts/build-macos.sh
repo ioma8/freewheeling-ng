@@ -14,4 +14,5 @@ if ! xcode-select -p >/dev/null 2>&1; then
   exit 1
 fi
 
-xcodebuild -project MacOSX/fweelin.xcodeproj -configuration Release build
+xcodebuild -project MacOSX/fweelin.xcodeproj -configuration Release clean build
+zsh scripts/package-macos-dylibs.sh

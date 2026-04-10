@@ -1,0 +1,8 @@
+brew "sdl2"
+brew "sdl2_ttf"
+brew "sdl_gfx"
+brew "libogg"
+brew "libvorbis"
+brew "libsndfile"
+brew "liblo"
+brew "nettle"

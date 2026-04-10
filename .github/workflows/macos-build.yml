@@ -20,3 +20,6 @@ jobs:
 
       - name: Run macOS verification
         run: zsh scripts/test-macos.sh
+
+      - name: Verify packaged dylib layout
+        run: otool -L MacOSX/build/Release/fweelin.app/Contents/MacOS/fweelin | (! rg '/opt/homebrew')

@@ -35,6 +35,7 @@
 #include "fweelin_config.h"
 #include "fweelin_audioio.h"
 #include "fweelin_core_dsp.h"
+#include "fweelin_dsp_profile.h"
 
 #if USE_FLUIDSYNTH
 #include "fweelin_fluidsynth.h"
@@ -115,8 +116,12 @@ OSStatus AudioIO::process(void *arg,
   AudioIO *inst = static_cast<AudioIO *>(arg);
   const unsigned int kCPULoadSamplePeriod = 16;
   const double kNanosPerSecond = 1000000000.0;
+  uint64_t profile_start_ticks = 0;
 
   register_audio_thread_if_needed(inst, pthread_self());
+
+  if (inst->dsp_profile_enabled)
+    profile_start_ticks = DspProfile::NowTicks();
 
   if (inst->cpuload_sample_count == 0)
     inst->cpuload_start_ticks = mach_absolute_time();
@@ -167,6 +172,9 @@ OSStatus AudioIO::process(void *arg,
   inst->timebase_master = 1;
   inst->transport_roll = 0;
   inst->sync_active = 0;
+  if (profile_start_ticks != 0)
+    DspProfile::RecordAudioCallback(DspProfile::NowTicks() - profile_start_ticks,
+                                    inNumberFrames);
   return noErr;
 }
 
@@ -472,6 +480,7 @@ int AudioIO::open() {
 
 int AudioIO::activate(Processor *rp) {
   this->rp = rp;
+  dsp_profile_enabled = (DspProfile::Enabled() ? 1 : 0);
 
   if (AudioOutputUnitStart(input_unit) != noErr) {
     fprintf(stderr, "AUDIO: cannot start input audio unit\n");
@@ -498,6 +507,9 @@ void AudioIO::RelocateTransport(nframes_t /*pos*/) {
 }
 
 void AudioIO::close() {
+  if (dsp_profile_enabled)
+    DspProfile::PrintReport(stderr);
+
   if (input_unit != 0) {
     AudioOutputUnitStop(input_unit);
     AudioUnitUninitialize(input_unit);

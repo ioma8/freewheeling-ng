@@ -67,7 +67,7 @@ public:
     : sync_start_frame(0), timebase_master(0), sync_active(0),
       audio_thread(0), audio_thread_2(0),
       cpuload_sample_count(0), cpuload_sample_frames(0),
-      cpuload_start_ticks(0),
+      cpuload_start_ticks(0), dsp_profile_enabled(0),
       app(app) {
     mach_timebase_info(&cpuload_timebase);
   }
@@ -192,6 +192,7 @@ public:
   nframes_t cpuload_sample_frames;
   uint64_t cpuload_start_ticks;
   mach_timebase_info_data_t cpuload_timebase;
+  char dsp_profile_enabled;
 
   // Pointer to the main app
   Fweelin *app;

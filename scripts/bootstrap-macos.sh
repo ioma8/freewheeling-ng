@@ -16,20 +16,16 @@ if ! command -v brew >/dev/null 2>&1; then
   exit 1
 fi
 
-typeset -a formulae=(
-  sdl2
-  sdl2_ttf
-  sdl_gfx
-  vorbis
-  libsndfile
-  liblo
-  nettle
-)
+brewfile="third_party/macos/Brewfile"
 
-echo "Installing required Homebrew formulae..."
-brew install "${formulae[@]}"
+if [[ ! -f "$brewfile" ]]; then
+  echo "Missing Brewfile at $brewfile" >&2
+  exit 1
+fi
+
+echo "Installing required Homebrew formulae from $brewfile..."
+brew bundle --file "$brewfile"
 
 echo
 echo "macOS bootstrap complete."
-echo "Note: Homebrew bottles on this machine may be built for a newer macOS deployment target than the project's 11.0 target."
-echo "That can produce linker warnings without breaking local builds."
+echo "The build now packages Homebrew dylibs into the app bundle so runtime does not depend on /opt/homebrew."
