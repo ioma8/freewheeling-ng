@@ -44,6 +44,29 @@
 #include "fweelin_paramset.h"
 #include "fweelin_logo.h"
 
+static Uint8 GetWindowBitsPerPixel() {
+  SDL_DisplayMode mode;
+  if (SDL_GetDesktopDisplayMode(0, &mode) == 0)
+    return static_cast<Uint8>(SDL_BITSPERPIXEL(mode.format));
+  return 32;
+}
+
+static Uint32 GetWindowFlags(char fullscreen) {
+  Uint32 flags = SDL_WINDOW_SHOWN;
+  if (fullscreen)
+    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_BORDERLESS;
+  return flags;
+}
+
+static SDL_Window *CreateVideoWindow(int width, int height, char fullscreen) {
+  return SDL_CreateWindow("FreeWheeling",
+                          SDL_WINDOWPOS_CENTERED,
+                          SDL_WINDOWPOS_CENTERED,
+                          width,
+                          height,
+                          GetWindowFlags(fullscreen));
+}
+
 double mygettime(void) {
   static struct timeval mytv;
   gettimeofday(&mytv,NULL);
@@ -293,6 +316,8 @@ char CircularMap::Map(SDL_Surface *out, int dstx, int dsty) {
 // ******** VIDEO HANDLER
 
 int VideoIO::activate() {
+  pthread_mutex_init (&video_thread_lock,0);
+
 #ifdef __MACOSX__
   // On Mac OS X, prime video in main thread
   SetVideoMode(0);
@@ -300,8 +325,6 @@ int VideoIO::activate() {
   
 #if 1
   printf("VIDEO: Starting handler..\n");
-
-  pthread_mutex_init (&video_thread_lock,0);
 
   const static size_t STACKSIZE = 1024*128;
   pthread_attr_t attr;
@@ -364,6 +387,11 @@ void VideoIO::close() {
 
   videothreadgo = 0;
   pthread_join(video_thread,0);
+  if (window != 0) {
+    SDL_DestroyWindow(window);
+    window = 0;
+    screen = 0;
+  }
   pthread_mutex_destroy (&video_thread_lock);
   printf("VIDEO: end\n");
 }
@@ -847,7 +875,7 @@ int VideoIO::draw_text(SDL_Surface *out, TTF_Font *font,
     if (justifyy)
       dstrect.y -= (justifyy == 1 ? dstrect.h/2 : dstrect.h);
 
-    SDL_SetColorKey(text, SDL_SRCCOLORKEY|SDL_RLEACCEL, 0);
+    SDL_SetColorKey(text, SDL_TRUE, 0);
     SDL_BlitSurface(text, NULL, out, &dstrect);
     SDL_FreeSurface(text);
   }
@@ -1363,7 +1391,7 @@ void VideoIO::video_event_loop ()
     Amask = screen->format->Amask;
   printf("VIDEO: Creating temporary buffers at %d bits\n",video_bpp);
   lscopepic = 
-    SDL_CreateRGBSurface(SDL_HWSURFACE, 
+    SDL_CreateRGBSurface(0,
                          lscopewidth, lscopeheight, video_bpp, 
                          Rmask, 
                          Gmask, 
@@ -1422,7 +1450,7 @@ void VideoIO::video_event_loop ()
     printf("VIDEO: Warning: Logo image must be 32-bit.\n");
   else {
     logopic = 
-      SDL_CreateRGBSurface(SDL_HWSURFACE, 
+      SDL_CreateRGBSurface(0,
                            fweelin_logo.width, fweelin_logo.height, 32, 
                            0x000000FF, 
                            0x0000FF00, 
@@ -1642,12 +1670,12 @@ void VideoIO::video_event_loop ()
             elclr.r = selcolor[0].r;
             elclr.g = selcolor[0].g;
             elclr.b = selcolor[0].b;
-            elclr.unused = 0;
+            elclr.a = 0;
           } else {
             elclr.r = (int) (loopcolors[clrnum][0].r*colormag);
             elclr.g = (int) (loopcolors[clrnum][0].g*colormag);
             elclr.b = (int) (loopcolors[clrnum][0].b*colormag);
-            elclr.unused = 0;
+            elclr.a = 0;
           }
 
           // Draw each geometry of this element
@@ -2027,7 +2055,8 @@ void VideoIO::video_event_loop ()
 #endif
 
     // Now update screen!
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
+    if (window != 0)
+      SDL_UpdateWindowSurface(window);
     //video_time = mygettime() - t1;
 #endif // NO_VIDEO
 
@@ -2056,37 +2085,36 @@ void VideoIO::video_event_loop ()
 }
 
 void VideoIO::SetVideoMode(char fullscreen) {
-  const SDL_VideoInfo *info;
   Uint8  video_bpp;
-  Uint32 videoflags;
 
   pthread_mutex_lock (&video_thread_lock);
 
-  if (screen != 0)
-    // Free existing screen
-    SDL_FreeSurface(screen);
+  if (window != 0) {
+    SDL_DestroyWindow(window);
+    window = 0;
+  }
   screen = 0;
 
   /* Alpha blending doesn't work well at 8-bit color */
-  info = SDL_GetVideoInfo();
-  if ( info->vfmt->BitsPerPixel > 8 ) {
-    video_bpp = info->vfmt->BitsPerPixel;
-  } else {
+  video_bpp = GetWindowBitsPerPixel();
+  if (video_bpp <= 8) {
     video_bpp = 16;
   }
   printf("VIDEO: SetVideoMode: Using %d-bit color\n", video_bpp);
 
-  // Disabled (slower) options:
-  /*| SDL_SRCALPHA | SDL_RESIZABLE |*/
-  videoflags = SDL_HWSURFACE | SDL_DOUBLEBUF;
   this->fullscreen = fullscreen;
-  if (fullscreen) 
-    videoflags |= SDL_FULLSCREEN | SDL_NOFRAME;
 
   /* Set right video mode */
   int XSIZE = app->getCFG()->GetVSize()[0],
     YSIZE = app->getCFG()->GetVSize()[1];
-  if ( (screen=SDL_SetVideoMode(XSIZE,YSIZE,video_bpp,videoflags)) == NULL ) {
+  window = CreateVideoWindow(XSIZE, YSIZE, fullscreen);
+  if (window == 0) {
+    printf("VIDEO: Couldn't create %ix%i window: %s\n", XSIZE, YSIZE,
+           SDL_GetError());
+    exit(1);
+  }
+  screen = SDL_GetWindowSurface(window);
+  if (screen == 0) {
     printf("VIDEO: Couldn't set %ix%i video mode: %s\n",XSIZE,YSIZE,
            SDL_GetError());
     exit(1);
@@ -2094,9 +2122,6 @@ void VideoIO::SetVideoMode(char fullscreen) {
 
   /* Use alpha blending */
   //SDL_SetAlpha(inst->screen, SDL_SRCALPHA, 0);
- 
-  /* Set title for window */
-  SDL_WM_SetCaption("FreeWheeling","FreeWheeling");
 
   pthread_mutex_unlock (&video_thread_lock);
 }

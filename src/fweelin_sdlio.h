@@ -20,6 +20,7 @@
 
 #include <pthread.h>
 
+#include "fweelin_sdlkey_compat.h"
 #include "fweelin_event.h"
 
 #ifdef __MACOSX__
@@ -59,8 +60,8 @@ class SDLKeyList {
 class SDLIO : public EventProducer, public EventListener {
 public:
   SDLIO (Fweelin *app) : app(app), sdlthreadgo(0) {
-    keyheld = new char[SDLK_LAST];
-    for (int i = 0; i < SDLK_LAST; i++)
+    keyheld = new char[FWL_SDLK_LAST];
+    for (int i = 0; i < FWL_SDLK_LAST; i++)
       keyheld[i] = 0;
   };
   virtual ~SDLIO() { 
@@ -83,14 +84,13 @@ public:
   // And the name corresponding to the keysym..
   static const char *GetSDLName(SDLKey sym);
 
-  inline void EnableUNICODE(int enable) { SDL_EnableUNICODE(enable); };
-  inline void EnableKeyRepeat(int enable) { 
+  inline void EnableUNICODE(int enable) {
     if (enable)
-      SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY,
-                          SDL_DEFAULT_REPEAT_INTERVAL);
-    else 
-      SDL_EnableKeyRepeat(0,0);
+      SDL_StartTextInput();
+    else
+      SDL_StopTextInput();
   };
+  inline void EnableKeyRepeat(int /*enable*/) {};
 
   // SDL event handler thread
   static void *run_sdl_thread (void *ptr);

@@ -20,15 +20,15 @@
 
 #include "fweelin_event.h"
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #ifdef __MACOSX__
-#include <SDL_gfx/SDL_gfxPrimitives.h>
-#include <SDL_ttf/SDL_ttf.h>
+#include "SDL_gfx/SDL_gfxPrimitives.h"
+#include "SDL_ttf/SDL_ttf.h"
 #include "FweelinMac.h"
 #else
-#include <SDL/SDL_gfxPrimitives.h>
-#include <SDL/SDL_ttf.h>
+#include "SDL_gfx/SDL_gfxPrimitives.h"
+#include "SDL_ttf/SDL_ttf.h"
 #endif
 
 #ifdef __MACOSX__
@@ -103,7 +103,7 @@ class VideoIO : public EventProducer, public EventListener {
   friend class Fweelin;
 
 public:
-  VideoIO (Fweelin *app) : app(app), screen(0), cmaps(0), 
+  VideoIO (Fweelin *app) : app(app), screen(0), window(0), cmaps(0),
     showlooprange(0,0), showhelppage(0), cur_iid(0), videothreadgo(0) {};
 
   virtual ~VideoIO() {};
@@ -172,6 +172,7 @@ public:
   char fullscreen; // Fullscreen video?
 
   SDL_Surface *screen;
+  SDL_Window *window;
   
   // Pointers to fonts that video uses - links into FloFont structures
   TTF_Font *mainfont, *helpfont, *smallfont, *tinyfont;

@@ -49,12 +49,14 @@
 		AC5A53F50AC09A6400622F72 /* fweelin_config.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53D90AC09A6400622F72 /* fweelin_config.cc */; };
 		AC5A53F70AC09A6400622F72 /* fweelin_core_dsp.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53DB0AC09A6400622F72 /* fweelin_core_dsp.cc */; };
 		AC5A53F90AC09A6400622F72 /* fweelin_core.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53DD0AC09A6400622F72 /* fweelin_core.cc */; };
+		D4A1000C0C0D000100000001 /* fweelin_core_persistence.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A1000D0C0D000100000001 /* fweelin_core_persistence.cc */; };
 		D4A100010C0D000100000001 /* fweelin_startup_guard.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A100020C0D000100000001 /* fweelin_startup_guard.cc */; };
 		AC5A53FB0AC09A6400622F72 /* fweelin_datatypes.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53DF0AC09A6400622F72 /* fweelin_datatypes.cc */; };
 		AC5A53FD0AC09A6400622F72 /* fweelin_event.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E10AC09A6400622F72 /* fweelin_event.cc */; };
 		AC5A53FF0AC09A6400622F72 /* fweelin_fluidsynth.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E30AC09A6400622F72 /* fweelin_fluidsynth.cc */; };
 		D4A100040C0D000100000001 /* fweelin_signal.c in Sources */ = {isa = PBXBuildFile; fileRef = D4A100050C0D000100000001 /* fweelin_signal.c */; };
 		D4A100070C0D000100000001 /* fweelin_processor_queue.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A100080C0D000100000001 /* fweelin_processor_queue.cc */; };
+		D4A1000A0C0D000100000001 /* fweelin_surface_primitives.cc in Sources */ = {isa = PBXBuildFile; fileRef = D4A1000B0C0D000100000001 /* fweelin_surface_primitives.cc */; };
 		AC5A54020AC09A6400622F72 /* fweelin_mem.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E60AC09A6400622F72 /* fweelin_mem.cc */; };
 		AC5A54040AC09A6400622F72 /* fweelin_midiio.cc in Sources */ = {isa = PBXBuildFile; fileRef = AC5A53E80AC09A6400622F72 /* fweelin_midiio.cc */; };
 		B1A001040AC09A6400622F72 /* fweelin_paramset.cc in Sources */ = {isa = PBXBuildFile; fileRef = B1A001050AC09A6400622F72 /* fweelin_paramset.cc */; };
@@ -65,7 +67,6 @@
 		AC6429D90AD9C85700752A08 /* Sndfile.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC6429D80AD9C85700752A08 /* Sndfile.framework */; };
 		AC6429DC0AD9C85C00752A08 /* Sndfile.framework in Copy Frameworks into .app bundle */ = {isa = PBXBuildFile; fileRef = AC6429D80AD9C85700752A08 /* Sndfile.framework */; };
 		AC776D470B69B161005E3D84 /* freewheeling.icns in Resources */ = {isa = PBXBuildFile; fileRef = AC776D460B69B161005E3D84 /* freewheeling.icns */; };
-		ACA2C53F0B06DCB600E02DC6 /* SDLMain.nib in Resources */ = {isa = PBXBuildFile; fileRef = ACA2C53E0B06DCB600E02DC6 /* SDLMain.nib */; };
 		ACE0E9170ACA15B4007E3ED2 /* Ogg.framework in Copy Frameworks into .app bundle */ = {isa = PBXBuildFile; fileRef = AC5A53240AC099C900622F72 /* Ogg.framework */; };
 		ACE0E9180ACA15B4007E3ED2 /* SDL_gfx.framework in Copy Frameworks into .app bundle */ = {isa = PBXBuildFile; fileRef = AC5A53250AC099C900622F72 /* SDL_gfx.framework */; };
 		ACE0E9190ACA15B4007E3ED2 /* SDL_ttf.framework in Copy Frameworks into .app bundle */ = {isa = PBXBuildFile; fileRef = AC5A53260AC099C900622F72 /* SDL_ttf.framework */; };
@@ -144,6 +145,7 @@
 		AC5A53DB0AC09A6400622F72 /* fweelin_core_dsp.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core_dsp.cc; path = ../src/fweelin_core_dsp.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DC0AC09A6400622F72 /* fweelin_core_dsp.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_core_dsp.h; path = ../src/fweelin_core_dsp.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DD0AC09A6400622F72 /* fweelin_core.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core.cc; path = ../src/fweelin_core.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A1000D0C0D000100000001 /* fweelin_core_persistence.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_core_persistence.cc; path = ../src/fweelin_core_persistence.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53DE0AC09A6400622F72 /* fweelin_core.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_core.h; path = ../src/fweelin_core.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		D4A100020C0D000100000001 /* fweelin_startup_guard.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_startup_guard.cc; path = ../src/fweelin_startup_guard.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		D4A100030C0D000100000001 /* fweelin_startup_guard.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_startup_guard.h; path = ../src/fweelin_startup_guard.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
@@ -157,6 +159,7 @@
 		D4A100060C0D000100000001 /* fweelin_signal.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_signal.h; path = ../src/fweelin_signal.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		D4A100080C0D000100000001 /* fweelin_processor_queue.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_processor_queue.cc; path = ../src/fweelin_processor_queue.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		D4A100090C0D000100000001 /* fweelin_processor_queue.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_processor_queue.h; path = ../src/fweelin_processor_queue.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
+		D4A1000B0C0D000100000001 /* fweelin_surface_primitives.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_surface_primitives.cc; path = ../src/fweelin_surface_primitives.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E50AC09A6400622F72 /* fweelin_logo.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_logo.h; path = ../src/fweelin_logo.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E60AC09A6400622F72 /* fweelin_mem.cc */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; name = fweelin_mem.cc; path = ../src/fweelin_mem.cc; sourceTree = SOURCE_ROOT; tabWidth = 8; };
 		AC5A53E70AC09A6400622F72 /* fweelin_mem.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = fweelin_mem.h; path = ../src/fweelin_mem.h; sourceTree = SOURCE_ROOT; tabWidth = 8; };
@@ -208,6 +211,7 @@
 				AC5A53DB0AC09A6400622F72 /* fweelin_core_dsp.cc */,
 				AC5A53DC0AC09A6400622F72 /* fweelin_core_dsp.h */,
 				AC5A53DD0AC09A6400622F72 /* fweelin_core.cc */,
+				D4A1000D0C0D000100000001 /* fweelin_core_persistence.cc */,
 				AC5A53DE0AC09A6400622F72 /* fweelin_core.h */,
 				D4A100020C0D000100000001 /* fweelin_startup_guard.cc */,
 				D4A100030C0D000100000001 /* fweelin_startup_guard.h */,
@@ -221,6 +225,7 @@
 				D4A100090C0D000100000001 /* fweelin_processor_queue.h */,
 				D4A100050C0D000100000001 /* fweelin_signal.c */,
 				D4A100060C0D000100000001 /* fweelin_signal.h */,
+				D4A1000B0C0D000100000001 /* fweelin_surface_primitives.cc */,
 				AC5A53E50AC09A6400622F72 /* fweelin_logo.h */,
 				AC5A53E60AC09A6400622F72 /* fweelin_mem.cc */,
 				AC5A53E70AC09A6400622F72 /* fweelin_mem.h */,
@@ -383,7 +388,6 @@
 				8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */,
 				AC126C440AC8EF4000FE916E /* VeraBd.ttf in Resources */,
 				AC126C450AC8EF4000FE916E /* Vera.ttf in Resources */,
-				ACA2C53F0B06DCB600E02DC6 /* SDLMain.nib in Resources */,
 				AC776D470B69B161005E3D84 /* freewheeling.icns in Resources */,
 				3D82625C0E96CDC700B480B6 /* fweelin.xml in Resources */,
 				3D82625D0E96CDC700B480B6 /* coreinterface.xml in Resources */,
@@ -421,12 +425,14 @@
 				AC5A53F50AC09A6400622F72 /* fweelin_config.cc in Sources */,
 				AC5A53F70AC09A6400622F72 /* fweelin_core_dsp.cc in Sources */,
 				AC5A53F90AC09A6400622F72 /* fweelin_core.cc in Sources */,
+				D4A1000C0C0D000100000001 /* fweelin_core_persistence.cc in Sources */,
 				D4A100010C0D000100000001 /* fweelin_startup_guard.cc in Sources */,
 				AC5A53FB0AC09A6400622F72 /* fweelin_datatypes.cc in Sources */,
 				AC5A53FD0AC09A6400622F72 /* fweelin_event.cc in Sources */,
 				AC5A53FF0AC09A6400622F72 /* fweelin_fluidsynth.cc in Sources */,
 				D4A100070C0D000100000001 /* fweelin_processor_queue.cc in Sources */,
 				D4A100040C0D000100000001 /* fweelin_signal.c in Sources */,
+				D4A1000A0C0D000100000001 /* fweelin_surface_primitives.cc in Sources */,
 				AC5A54020AC09A6400622F72 /* fweelin_mem.cc in Sources */,
 				AC5A54040AC09A6400622F72 /* fweelin_midiio.cc in Sources */,
 				B1A001040AC09A6400622F72 /* fweelin_paramset.cc in Sources */,
@@ -494,6 +500,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = arm64;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(FRAMEWORK_SEARCH_PATHS)",
 				);
@@ -519,17 +526,11 @@
 				OTHER_CFLAGS = (
 					"-D",
 					__MACOSX__,
-					"-fpermissive",
 				);
 				OTHER_LDFLAGS = (
-					"-lSDL",
 					"-lSDL2",
-					"-lSDLmain",
-					"-lSDL2main",
-					"-lSDL_gfx",
+				"-lSDL_gfx",
 					"-lSDL2_ttf",
-					"-lFLAC",
-					"-lcrypto",
 					"-lvorbis",
 					"-lvorbisfile",
 					"-lvorbisenc",
@@ -542,6 +543,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = FreeWheeling;
 				USE_HEADERMAP = NO;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				ZERO_LINK = NO;
 			};
 			name = Debug;
@@ -551,6 +553,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = arm64;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(FRAMEWORK_SEARCH_PATHS)",
 				);
@@ -576,17 +579,11 @@
 				OTHER_CFLAGS = (
 					"-D",
 					__MACOSX__,
-					"-fpermissive",
 				);
 				OTHER_LDFLAGS = (
-					"-lSDL",
 					"-lSDL2",
-					"-lSDLmain",
-					"-lSDL2main",
-					"-lSDL_gfx",
+				"-lSDL_gfx",
 					"-lSDL2_ttf",
-					"-lFLAC",
-					"-lcrypto",
 					"-lvorbis",
 					"-lvorbisfile",
 					"-lvorbisenc",
@@ -599,6 +596,7 @@
 				PREBINDING = NO;
 				PRODUCT_NAME = FreeWheeling;
 				USE_HEADERMAP = NO;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				ZERO_LINK = NO;
 			};
 			name = Release;

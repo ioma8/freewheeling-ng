@@ -14,6 +14,7 @@
 #import <unistd.h>
 
 extern char *FWEELIN_DATADIR;
+extern "C" int FweelinAppMain(int argc, char **argv);
 
 /* For some reaon, Apple removed setAppleMenu from the headers in 10.4,
  but the method still is there and works. To avoid warnings, we declare
@@ -23,7 +24,7 @@ extern char *FWEELIN_DATADIR;
 @end
 
 /* Use this flag to determine whether we use SDLMain.nib or not */
-#define		SDL_USE_NIB_FILE	1
+#define		SDL_USE_NIB_FILE	0
 
 /* Use this flag to determine whether we use CPS (docking) or not */
 #define		SDL_USE_CPS		1
@@ -35,9 +36,9 @@ typedef struct CPSProcessSerNum
 	UInt32		hi;
 } CPSProcessSerNum;
 
-extern OSErr	CPSGetCurrentProcess( CPSProcessSerNum *psn);
-extern OSErr 	CPSEnableForegroundOperation( CPSProcessSerNum *psn, UInt32 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
-extern OSErr	CPSSetFrontProcess( CPSProcessSerNum *psn);
+extern "C" OSErr	CPSGetCurrentProcess( CPSProcessSerNum *psn);
+extern "C" OSErr 	CPSEnableForegroundOperation( CPSProcessSerNum *psn, UInt32 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
+extern "C" OSErr	CPSSetFrontProcess( CPSProcessSerNum *psn);
 
 #endif /* SDL_USE_CPS */
 
@@ -69,10 +70,10 @@ static NSString *getApplicationName(void)
 @end
 #endif
 
-@interface SDLApplication : NSApplication
+@interface FweelinApplication : NSApplication
 @end
 
-@implementation SDLApplication
+@implementation FweelinApplication
 /* Invoked from the Quit menu item */
 - (void)terminate:(id)sender
 {
@@ -90,6 +91,23 @@ static NSString *getApplicationName(void)
 {
 	// NSLog(@"AWAKE\n");
 	FweelinMac::LinkSDLMain(self);
+
+    NSMenu *mainMenu = [NSApp mainMenu];
+    for (NSMenuItem *item in [mainMenu itemArray]) {
+        NSMenu *submenu = [item submenu];
+        if (submenu == nil)
+            continue;
+        if ([[item title] isEqualToString:@"Window"] || [[submenu title] isEqualToString:@"Window"])
+            [NSApp setWindowsMenu:submenu];
+        if ([[item title] isEqualToString:@"Help"] || [[submenu title] isEqualToString:@"Help"])
+            [NSApp setHelpMenu:submenu];
+    }
+}
+
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app
+{
+    (void) app;
+    return YES;
 }
 
 - (IBAction)toggleDebugMode:(id)sender
@@ -128,12 +146,6 @@ static NSString *getApplicationName(void)
 - (void)addMIDIInputSource:(NSString *)name
 {
 	[midiInputSel addItemWithTitle:name];
-}
-
-// Dummy thread to invoke multithreaded mode
-+ (void) dummyThread:(id)sender
-{
-	(void) sender;
 }
 
 /* Set the working directory to the .app's parent directory */
@@ -200,7 +212,7 @@ static void setApplicationMenu(void)
     [appleMenu addItemWithTitle:title action:@selector(hide:) keyEquivalent:@"h"];
 
     menuItem = (NSMenuItem *)[appleMenu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
-    [menuItem setKeyEquivalentModifierMask:(NSAlternateKeyMask|NSCommandKeyMask)];
+    [menuItem setKeyEquivalentModifierMask:(NSEventModifierFlagOption | NSEventModifierFlagCommand)];
 
     [appleMenu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
 
@@ -273,7 +285,7 @@ static void CustomApplicationMain (int argc, char **argv)
     SDLMain				*sdlMain;
 
     /* Ensure the application object is initialised */
-    [SDLApplication sharedApplication];
+    [FweelinApplication sharedApplication];
     
 #ifdef SDL_USE_CPS
     {
@@ -282,7 +294,7 @@ static void CustomApplicationMain (int argc, char **argv)
         if (!CPSGetCurrentProcess(&PSN))
             if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
                 if (!CPSSetFrontProcess(&PSN))
-                    [SDLApplication sharedApplication];
+                    [FweelinApplication sharedApplication];
     }
 #endif /* SDL_USE_CPS */
 
@@ -293,6 +305,7 @@ static void CustomApplicationMain (int argc, char **argv)
 
     /* Create SDLMain and make it the app delegate */
     sdlMain = [[SDLMain alloc] init];
+    FweelinMac::LinkSDLMain(sdlMain);
     [NSApp setDelegate:sdlMain];
     requestMicrophoneAccessIfNeeded();
    	
@@ -370,7 +383,7 @@ static void CustomApplicationMain (int argc, char **argv)
 	
     /* Hand off to main application code */
     gCalledAppMainline = TRUE;
-    status = SDL_main (gArgc, gArgv);
+    status = FweelinAppMain(gArgc, gArgv);
 
     /* We're done, thank you for playing */
     exit(status);
@@ -442,10 +455,6 @@ int main (int argc, char **argv)
             gArgv[i] = argv[i];
         gFinderLaunch = NO;
     }
-	
-	// Setup multithreaded mode
-	[NSThread detachNewThreadSelector:@selector(dummyThread:) toTarget:[SDLMain class] withObject:nil];
-	// printf("MULTITHREADED: %d\n",[NSThread isMultiThreaded]);	
 	
 #if SDL_USE_NIB_FILE
     NSApplicationMain (argc, (const char **) argv);

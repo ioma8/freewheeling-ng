@@ -70,16 +70,16 @@ char ItemRenamer::HookEvent(Event *ev, EventProducer */*from*/) {
         if (kev->down) 
           Rename_Append((char) (kev->unicode & 0xFF)); 
         return 1;
-      } else if (kev->keysym == SDLK_BACKSPACE) {
+      } else if (kev->keysym == FWL_SDLK_BACKSPACE) {
         if (kev->down) 
           Rename_Backspace();
         return 1;
-      } else if (kev->keysym == SDLK_SPACE) {
+      } else if (kev->keysym == FWL_SDLK_SPACE) {
         if (kev->down)
           Rename_Append(' ');
 
-      } else if (kev->keysym == SDLK_RETURN ||
-                 kev->keysym == SDLK_KP_ENTER) {
+      } else if (kev->keysym == FWL_SDLK_RETURN ||
+                 kev->keysym == FWL_SDLK_KP_ENTER) {
         if (kev->down) {
           app->getCFG()->RemoveEventHook(this);
           app->getSDLIO()->EnableUNICODE(0);
@@ -89,7 +89,7 @@ char ItemRenamer::HookEvent(Event *ev, EventProducer */*from*/) {
           cb->ItemRenamed(rename_tmpbuf); // Callback may delete -this-
         }
         return 1;
-      } else if (kev->keysym == SDLK_ESCAPE) {
+      } else if (kev->keysym == FWL_SDLK_ESCAPE) {
         if (kev->down) {
           app->getCFG()->RemoveEventHook(this);
           app->getSDLIO()->EnableUNICODE(0);

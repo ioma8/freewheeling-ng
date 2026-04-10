@@ -566,7 +566,7 @@ SDLKeyList *InputMatrix::AddOneKey (SDLKeyList *first, char *str) {
   str = RemoveSpaces(str);
 
   SDLKey kh_sym = SDLIO::GetSDLKey(str);
-  if (kh_sym != SDLK_UNKNOWN) {
+  if (kh_sym != FWL_SDLK_UNKNOWN) {
     printf("'%s' + ",str);
 
     // Link it in!
@@ -1291,8 +1291,8 @@ void InputMatrix::ParseToken(char *str, CfgToken *dst, Event *ref,
   // Parse key name?
   if (enable_keynames) {
     int keysym = SDLIO::GetSDLKey((char *) str);
-    if (keysym != SDLK_UNKNOWN && keysym >= SDLK_FIRST &&
-        keysym < SDLK_LAST) {
+    if (keysym != FWL_SDLK_UNKNOWN && keysym >= FWL_SDLK_FIRST &&
+        keysym < FWL_SDLK_LAST) {
       // Token references a keyboard key!
       dst->cvt = T_CFG_Static; // Interpret as static
       dst->val.type = T_int;

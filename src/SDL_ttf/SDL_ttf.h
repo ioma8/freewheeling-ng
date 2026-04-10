@@ -1,7 +1,7 @@
 #ifndef FWEELIN_SDL_TTF_H
 #define FWEELIN_SDL_TTF_H
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #ifdef __cplusplus
 extern "C" {

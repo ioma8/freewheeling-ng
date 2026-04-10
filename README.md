@@ -20,6 +20,33 @@ Apple Silicon and builds as a native `arm64` application.
 The macOS path in this fork uses the native CoreAudio stack together with
 SDL and the original Freewheeling codebase.
 
+### Fork Changes
+
+This fork is focused on making the project usable again on current macOS
+systems without rewriting the application itself. The main changes are:
+
+- restored a working native macOS build in `MacOSX/`
+- migrated the macOS app from mixed SDL 1.2/SDL2 linkage to SDL2-only
+- removed the obsolete `SDLMain.nib` bootstrap path and replaced it with
+  a programmatic Cocoa startup path
+- fixed multiple macOS-specific startup and runtime crashes in the audio
+  path and event/memory plumbing
+- hardened partial startup rollback so failed initialization no longer
+  leaves subsystems half-open
+- moved critical processor-list ownership back to the realtime audio side
+  instead of unsound cross-thread mutation
+- cleaned up large amounts of legacy warning noise and made the Xcode
+  build warning-free at source level
+- modernized the Xcode project to use an explicit C++14 build, removed
+  `-fpermissive`, and lowered the deployment target to macOS 11.0
+- refactored major top-level ownership in `Fweelin` to `std::unique_ptr`
+  where the object model actually supports single ownership
+- reduced startup/debug log spam so normal runs are easier to inspect
+
+The result is still the original Freewheeling codebase and configuration
+model, but with a maintained macOS fork that currently builds and runs on
+modern Apple Silicon machines.
+
 
 ### Philosophy
 
@@ -64,37 +91,50 @@ See the [Technical Features][Technical_Features].
 Building on macOS
 ------------------
 
-The macOS project lives in `MacOSX/fweelin.xcodeproj`. To build it you need:
+The macOS project lives in `MacOSX/fweelin.xcodeproj`. The supported local flow uses the checked-in scripts in `scripts/`.
+
+To build it you need:
 
 - Xcode
 - Homebrew
 - Apple Silicon Homebrew in `/opt/homebrew`
 - The following Homebrew libraries:
-  - `sdl`
   - `sdl2`
   - `sdl2_ttf`
   - `sdl_gfx`
-  - `flac`
   - `vorbis`
   - `libsndfile`
   - `liblo`
   - `nettle`
-  - `openssl@3`
 
 Install them with:
 
 ```bash
-brew install sdl sdl2 sdl2_ttf sdl_gfx flac vorbis libsndfile liblo nettle openssl@3
+zsh scripts/bootstrap-macos.sh
 ```
 
 Then build from the repo root with:
 
 ```bash
-xcodebuild -project MacOSX/fweelin.xcodeproj -configuration Release build
+zsh scripts/build-macos.sh
+```
+
+Run the local verification path with:
+
+```bash
+zsh scripts/test-macos.sh
 ```
 
 The project is currently configured for `arm64` and expects headers and
 libraries in the standard Homebrew locations under `/opt/homebrew`.
+
+The repository also includes a macOS GitHub Actions workflow that uses the
+same checked-in bootstrap, build, and test scripts. Local development and CI
+therefore follow the same procedure.
+
+Note: the project deployment target is `macOS 11.0`, but Homebrew bottles on a
+given machine may have been built for newer macOS versions. That can produce
+linker warnings without breaking local builds on a current system.
 
 
 Getting Started

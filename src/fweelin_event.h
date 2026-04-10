@@ -21,7 +21,7 @@
 #include <limits.h>
 #include <pthread.h>
 
-#include <SDL/SDL.h>
+#include "fweelin_sdlkey_compat.h"
 extern "C"
 {
 #ifdef __MACOSX__
@@ -390,7 +390,7 @@ class KeyInputEvent : public Event {
   };
   EVT_PARAM_TABLE(3,
                   EventParameter("keydown",FWEELIN_GETOFS(down),T_char),
-                  EventParameter("key",FWEELIN_GETOFS(keysym),T_int,SDLK_LAST),
+EventParameter("key",FWEELIN_GETOFS(keysym),T_int,FWL_SDLK_LAST),
                   EventParameter("unicode",FWEELIN_GETOFS(unicode),T_int))
 
   char down; // Nonzero if key is pressed, zero if key is released

@@ -63,7 +63,7 @@ static void info_signal_handler(int sig) {
 
 
 #ifndef NO_COMPILE_MAIN
-int main (int /*argc*/, char *argv[]) {
+extern "C" int FweelinAppMain(int /*argc*/, char *argv[]) {
   // Initialize the stack trace mechanism 
   StackTraceInit(argv[0], -1);
 
@@ -100,6 +100,12 @@ int main (int /*argc*/, char *argv[]) {
   
   return 0;
 }
+
+#ifndef __MACOSX__
+int main (int argc, char *argv[]) {
+  return FweelinAppMain(argc, argv);
+}
+#endif
 #endif // NO_COMPILE_MAIN
 
 

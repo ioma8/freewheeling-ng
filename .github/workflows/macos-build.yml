@@ -1,0 +1,22 @@
+name: macOS Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  macos-build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Bootstrap macOS dependencies
+        run: zsh scripts/bootstrap-macos.sh
+
+      - name: Build macOS app
+        run: zsh scripts/build-macos.sh
+
+      - name: Run macOS verification
+        run: zsh scripts/test-macos.sh

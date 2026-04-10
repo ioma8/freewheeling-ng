@@ -26,7 +26,9 @@
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+#include <memory>
 #include <nettle/md5.h>
+#include <vector>
 
 #include "fweelin_amixer.h"
 #include "fweelin_midiio.h"
@@ -443,7 +445,7 @@ public:
   // for the scene
   void GoSave(char *filename);
 
-  inline void SetMap (int index, Loop *smp);
+  void SetMap (int index, Loop *smp);
 
   inline Loop *GetMap (int index) {
     if (index < 0 || index >= mapsize) {
@@ -921,15 +923,12 @@ class Fweelin : public EventProducer, public BrowserCallback {
   Fweelin() : 
 
 #if USE_FLUIDSYNTH
-    fluidp(0), 
+    fluidp(),
 #endif
 
-    osc(0), mmg(0), bmg(0), emg(0), rp(0), tmap(0),
-    loopmgr(0), browsers(0), pre_audioblock(0), pre_extrachannel(0),
-    pre_timemarker(0), fs_finalout(0), fs_loopout(0), fs_inputs(0),
-    writenum(0), masterlimit(0), snaps(0), curscene(0), abufs(0), iset(0),
-    audio(0), midi(0), sdlio(0), vid(0), fragmentsize(0), scope(0),
-    scope_len(0), audiomem(0), amrec(0), cfg(0), hmix(0),
+    fs_finalout(0), fs_loopout(0),
+    writenum(0), masterlimit(0), curscene(0), fragmentsize(0),
+    scope_len(0), audiomem(0), amrec(0),
     sync_type(0), sync_speed(1), running(0), sdl_ready(0),
     rt_threads_ready(0) {};
   ~Fweelin() {};
@@ -945,12 +944,12 @@ class Fweelin : public EventProducer, public BrowserCallback {
   void FlushStreamOutName() { streamoutname = ""; };
 
   inline nframes_t getBUFSZ() { return fragmentsize; };
-  inline sample_t *getSCOPE() { return scope; };
+  inline sample_t *getSCOPE() { return scope.get(); };
   inline nframes_t getSCOPELEN() { return scope_len; };
 
 #if USE_FLUIDSYNTH
-  inline FluidSynthProcessor *getFLUIDP() { return fluidp; };
-  FluidSynthProcessor *fluidp;
+  inline FluidSynthProcessor *getFLUIDP() { return fluidp.get(); };
+  std::unique_ptr<FluidSynthProcessor> fluidp;
 #endif
 
   inline AudioBlock *getAUDIOMEM() { return audiomem; };
@@ -962,10 +961,10 @@ class Fweelin : public EventProducer, public BrowserCallback {
   AudioBlockIterator *getAMAVGSI();
   BED_MarkerPoints *getAMPEAKSPULSE();
 
-  inline MemoryManager *getMMG() { return mmg; };
-  inline BlockManager *getBMG() { return bmg; };
-  inline EventManager *getEMG() { return emg; };
-  inline RootProcessor *getRP() { return rp; };
+  inline MemoryManager *getMMG() { return mmg.get(); };
+  inline BlockManager *getBMG() { return bmg.get(); };
+  inline EventManager *getEMG() { return emg.get(); };
+  inline RootProcessor *getRP() { return rp.get(); };
   inline FileStreamer *getSTREAMER_INPUT(int n) { return fs_inputs[n]; };
   inline FileStreamer *getSTREAMER_LOOPMIX() { return fs_loopout; };
   inline FileStreamer *getSTREAMER_FINALMIX() { return fs_finalout; };
@@ -976,16 +975,16 @@ class Fweelin : public EventProducer, public BrowserCallback {
   // Also returns the number of streams being written.
   long int getSTREAMER_TotalOutputSize(int &numstreams);
 
-  inline TriggerMap *getTMAP() { return tmap; };
-  inline LoopManager *getLOOPMGR() { return loopmgr; };
+  inline TriggerMap *getTMAP() { return tmap.get(); };
+  inline LoopManager *getLOOPMGR() { return loopmgr.get(); };
   
-  inline AudioIO *getAUDIO() { return audio; };
-  inline MidiIO *getMIDI() { return midi; };
-  inline VideoIO *getVIDEO() { return vid; };
-  inline SDLIO *getSDLIO() { return sdlio; };
-  inline HardwareMixerInterface *getHMIX() { return hmix; };
+  inline AudioIO *getAUDIO() { return audio.get(); };
+  inline MidiIO *getMIDI() { return midi.get(); };
+  inline VideoIO *getVIDEO() { return vid.get(); };
+  inline SDLIO *getSDLIO() { return sdlio.get(); };
+  inline HardwareMixerInterface *getHMIX() { return hmix.get(); };
 
-  inline FloConfig *getCFG() { return cfg; };
+  inline FloConfig *getCFG() { return cfg.get(); };
 
   inline const std::string &getSTREAMOUTNAME() { return streamoutname; };
   inline const std::string &getSTREAMOUTNAME_DISPLAY() { return streamoutname_display; };
@@ -1004,12 +1003,12 @@ class Fweelin : public EventProducer, public BrowserCallback {
   inline SceneBrowserItem *getCURSCENE() { return curscene; };
   inline void setCURSCENE(SceneBrowserItem *nw) { curscene = nw; };
 
-  inline PreallocatedType *getPRE_EXTRACHANNEL() { return pre_extrachannel; };
-  inline PreallocatedType *getPRE_AUDIOBLOCK() { return pre_audioblock; };
-  inline PreallocatedType *getPRE_TIMEMARKER() { return pre_timemarker; };
+  inline PreallocatedType *getPRE_EXTRACHANNEL() { return pre_extrachannel.get(); };
+  inline PreallocatedType *getPRE_AUDIOBLOCK() { return pre_audioblock.get(); };
+  inline PreallocatedType *getPRE_TIMEMARKER() { return pre_timemarker.get(); };
 
-  inline AudioBuffers *getABUFS() { return abufs; };
-  inline InputSettings *getISET() { return iset; };
+  inline AudioBuffers *getABUFS() { return abufs.get(); };
+  inline InputSettings *getISET() { return iset.get(); };
 
   inline AutoLimitProcessor *getMASTERLIMITER() { return masterlimit; };
   void RollbackSetup();
@@ -1031,7 +1030,7 @@ class Fweelin : public EventProducer, public BrowserCallback {
 
   // Snapshots
   Snapshot *getSNAP(int idx); 
-  inline Snapshot *getSNAPS() { return snaps; }; 
+  inline Snapshot *getSNAPS() { return snaps.data(); };
 
   // Trigger snapshot #idx - return nonzero on failure
   char TriggerSnapshot (int idx);
@@ -1042,7 +1041,7 @@ class Fweelin : public EventProducer, public BrowserCallback {
     Snapshot *s = getSNAP(idx);
     if (s != 0) {
       tmap->TouchMap();
-      s->CreateSnapshot(0,loopmgr,tmap);
+      s->CreateSnapshot(0, loopmgr.get(), tmap.get());
     }
     return s;
   };
@@ -1106,27 +1105,29 @@ class Fweelin : public EventProducer, public BrowserCallback {
   virtual void ItemRenamed(BrowserItem */*item*/) { return; };
 
  private:
-  OSCClient *osc;
-  MemoryManager *mmg;
-  BlockManager *bmg;
-  EventManager *emg;
-  RootProcessor *rp;
-  TriggerMap *tmap;
-  LoopManager *loopmgr;
+#ifndef __MACOSX__
+  std::unique_ptr<OSCClient> osc;
+#endif
+  std::unique_ptr<MemoryManager> mmg;
+  std::unique_ptr<BlockManager> bmg;
+  std::unique_ptr<EventManager> emg;
+  std::unique_ptr<RootProcessor> rp;
+  std::unique_ptr<TriggerMap> tmap;
+  std::unique_ptr<LoopManager> loopmgr;
 
-  Browser **browsers;
+  std::vector<Browser *> browsers;
 
   Browser *GetBrowserFromConfig(BrowserItemType b);
 
   // ****************** PREALLOCATED TYPE MANAGERS
-  PreallocatedType *pre_audioblock,
-    *pre_extrachannel,
-    *pre_timemarker;
+  std::unique_ptr<PreallocatedType> pre_audioblock;
+  std::unique_ptr<PreallocatedType> pre_extrachannel;
+  std::unique_ptr<PreallocatedType> pre_timemarker;
 
   // ******************  DISK STREAMERS
   FileStreamer *fs_finalout,        // Final output disk stream
-    *fs_loopout,                    // Loop output disk stream
-    **fs_inputs;                    // Array of pointers to disk streams for audio inputs
+    *fs_loopout;                    // Loop output disk stream
+  std::vector<FileStreamer *> fs_inputs; // Audio input disk streams
 
   int writenum;                     // Number of audio output file currently being written
   std::string streamoutname,        // Full path and base name of output stream (for example, fw-lib/live52)
@@ -1139,33 +1140,33 @@ class Fweelin : public EventProducer, public BrowserCallback {
   LoopList *loopsel[NUM_LOOP_SELECTION_SETS];
 
   // ******************  ARRAY OF SNAPSHOTS
-  Snapshot *snaps;
+  std::vector<Snapshot> snaps;
  
   // ******************  SCENE INFO
   SceneBrowserItem *curscene;
 
   // ****************** SYSTEM LEVEL AUDIO  
   // Audio buffers
-  AudioBuffers *abufs;
+  std::unique_ptr<AudioBuffers> abufs;
   // Input settings
-  InputSettings *iset;
+  std::unique_ptr<InputSettings> iset;
   // Audio interface
-  AudioIO *audio;
+  std::unique_ptr<AudioIO> audio;
 
   // ****************** MIDI
-  MidiIO *midi;
+  std::unique_ptr<MidiIO> midi;
   
   // ****************** SDL INPUT (KEYBOARD / MOUSE / JOYSTICK)
-  SDLIO *sdlio;
+  std::unique_ptr<SDLIO> sdlio;
   
   // ****************** VIDEO
-  VideoIO *vid;
+  std::unique_ptr<VideoIO> vid;
 
   // Audio buffer size
   nframes_t fragmentsize;
 
   // Buffers for visual sample scope
-  sample_t *scope;
+  std::unique_ptr<sample_t[]> scope;
   nframes_t scope_len;
 
   // Audio memory & the processor which records to it
@@ -1173,10 +1174,10 @@ class Fweelin : public EventProducer, public BrowserCallback {
   RecordProcessor *amrec;
 
   // Control settings 
-  FloConfig *cfg;
+  std::unique_ptr<FloConfig> cfg;
 
   // Hardware Mixer settings
-  HardwareMixerInterface *hmix;
+  std::unique_ptr<HardwareMixerInterface> hmix;
   
   // Variables for sync
   

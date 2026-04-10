@@ -36,8 +36,7 @@
 #include <sched.h>
 #include <sys/mman.h>
 
-#include <SDL/SDL.h>
-#include <SDL/SDL_joystick.h>
+#include <SDL2/SDL.h>
 
 #ifdef __MACOSX__
 #include <SDL_gfx/SDL_gfxPrimitives.h>
@@ -49,6 +48,90 @@
 
 #include "fweelin_sdlio.h"
 #include "fweelin_core.h"
+
+static SDLKey TranslateSDLKeycode(SDL_Keycode keycode) {
+  if ((keycode >= 32 && keycode <= 126) ||
+      (keycode >= 160 && keycode <= 255))
+    return static_cast<SDLKey>(keycode);
+
+  switch (keycode) {
+  case SDLK_KP_0: return FWL_SDLK_KP0;
+  case SDLK_KP_1: return FWL_SDLK_KP1;
+  case SDLK_KP_2: return FWL_SDLK_KP2;
+  case SDLK_KP_3: return FWL_SDLK_KP3;
+  case SDLK_KP_4: return FWL_SDLK_KP4;
+  case SDLK_KP_5: return FWL_SDLK_KP5;
+  case SDLK_KP_6: return FWL_SDLK_KP6;
+  case SDLK_KP_7: return FWL_SDLK_KP7;
+  case SDLK_KP_8: return FWL_SDLK_KP8;
+  case SDLK_KP_9: return FWL_SDLK_KP9;
+  case SDLK_KP_PERIOD: return FWL_SDLK_KP_PERIOD;
+  case SDLK_KP_DIVIDE: return FWL_SDLK_KP_DIVIDE;
+  case SDLK_KP_MULTIPLY: return FWL_SDLK_KP_MULTIPLY;
+  case SDLK_KP_MINUS: return FWL_SDLK_KP_MINUS;
+  case SDLK_KP_PLUS: return FWL_SDLK_KP_PLUS;
+  case SDLK_KP_ENTER: return FWL_SDLK_KP_ENTER;
+  case SDLK_KP_EQUALS: return FWL_SDLK_KP_EQUALS;
+  case SDLK_UP: return FWL_SDLK_UP;
+  case SDLK_DOWN: return FWL_SDLK_DOWN;
+  case SDLK_RIGHT: return FWL_SDLK_RIGHT;
+  case SDLK_LEFT: return FWL_SDLK_LEFT;
+  case SDLK_INSERT: return FWL_SDLK_INSERT;
+  case SDLK_HOME: return FWL_SDLK_HOME;
+  case SDLK_END: return FWL_SDLK_END;
+  case SDLK_PAGEUP: return FWL_SDLK_PAGEUP;
+  case SDLK_PAGEDOWN: return FWL_SDLK_PAGEDOWN;
+  case SDLK_F1: return FWL_SDLK_F1;
+  case SDLK_F2: return FWL_SDLK_F2;
+  case SDLK_F3: return FWL_SDLK_F3;
+  case SDLK_F4: return FWL_SDLK_F4;
+  case SDLK_F5: return FWL_SDLK_F5;
+  case SDLK_F6: return FWL_SDLK_F6;
+  case SDLK_F7: return FWL_SDLK_F7;
+  case SDLK_F8: return FWL_SDLK_F8;
+  case SDLK_F9: return FWL_SDLK_F9;
+  case SDLK_F10: return FWL_SDLK_F10;
+  case SDLK_F11: return FWL_SDLK_F11;
+  case SDLK_F12: return FWL_SDLK_F12;
+  case SDLK_F13: return FWL_SDLK_F13;
+  case SDLK_F14: return FWL_SDLK_F14;
+  case SDLK_F15: return FWL_SDLK_F15;
+  case SDLK_NUMLOCKCLEAR: return FWL_SDLK_NUMLOCK;
+  case SDLK_CAPSLOCK: return FWL_SDLK_CAPSLOCK;
+  case SDLK_SCROLLLOCK: return FWL_SDLK_SCROLLOCK;
+  case SDLK_RSHIFT: return FWL_SDLK_RSHIFT;
+  case SDLK_LSHIFT: return FWL_SDLK_LSHIFT;
+  case SDLK_RCTRL: return FWL_SDLK_RCTRL;
+  case SDLK_LCTRL: return FWL_SDLK_LCTRL;
+  case SDLK_RALT: return FWL_SDLK_RALT;
+  case SDLK_LALT: return FWL_SDLK_LALT;
+  case SDLK_RGUI: return FWL_SDLK_RMETA;
+  case SDLK_LGUI: return FWL_SDLK_LMETA;
+  case SDLK_MODE: return FWL_SDLK_MODE;
+  case SDLK_HELP: return FWL_SDLK_HELP;
+  case SDLK_PRINTSCREEN: return FWL_SDLK_PRINT;
+  case SDLK_SYSREQ: return FWL_SDLK_SYSREQ;
+  case SDLK_MENU: return FWL_SDLK_MENU;
+  case SDLK_POWER: return FWL_SDLK_POWER;
+  case SDLK_UNDO: return FWL_SDLK_UNDO;
+  default:
+    return FWL_SDLK_UNKNOWN;
+  }
+}
+
+static int DecodeTextInputUnicode(const char *text) {
+  const unsigned char *ptr = reinterpret_cast<const unsigned char *>(text);
+  if (ptr == 0 || ptr[0] == '\0')
+    return 0;
+  if (ptr[0] < 0x80)
+    return ptr[0];
+  if ((ptr[0] & 0xE0) == 0xC0 && ptr[1] != '\0') {
+    const int codepoint = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+    if (codepoint <= 255)
+      return codepoint;
+  }
+  return 0;
+}
 
 // ******** KEYBOARD / MOUSE / JOYSTICK HANDLER
 
@@ -379,7 +462,7 @@ static const char *SDL_names[] = {
 
 SDLKey SDLIO::GetSDLKey(char *keyname) {
   SDLKey ky;
-  for (ky = SDLK_FIRST; ky < SDLK_LAST; ky = (SDLKey)(ky+1)) {
+  for (ky = FWL_SDLK_FIRST; ky < FWL_SDLK_LAST; ky = (SDLKey)(ky+1)) {
     /*char *nm = SDL_GetKeyName(ky);
       printf("\"%s\", \n",(!strcmp(nm,"unknown key") ? "" : nm));*/
     /*if (SDL_names[ky][0] != '\0')
@@ -389,10 +472,14 @@ SDLKey SDLIO::GetSDLKey(char *keyname) {
       return ky;
   }
 
-  return SDLK_UNKNOWN;
+  return FWL_SDLK_UNKNOWN;
 };
 
-const char *SDLIO::GetSDLName(SDLKey sym) { return SDL_names[sym]; };
+const char *SDLIO::GetSDLName(SDLKey sym) {
+  if (sym < FWL_SDLK_FIRST || sym >= FWL_SDLK_LAST)
+    return "";
+  return SDL_names[sym];
+};
 
 int SDLIO::activate() {
   sdlthreadgo = 1;
@@ -480,56 +567,55 @@ void SDLIO::handle_key(int keycode, char press) {
     }
 #endif
 
-    if (keycode == 108) {
-      // greyENTER
-      // Produce stdout status report
+    if (keycode == FWL_SDLK_KP_ENTER) {
+      // keypad enter
       app->getCFG()->status_report = 1;
     }
-    else if (keycode == 65) {
+    else if (keycode == FWL_SDLK_SPACE) {
       // spacebar
       sets.spacekey = 1;
     }
-    else if (keycode == 64) {
+    else if (keycode == FWL_SDLK_LALT) {
       // left alt
       sets.leftalt = 1;
     }
-    else if (keycode == 113) {
+    else if (keycode == FWL_SDLK_RALT) {
       // right alt
       sets.rightalt = 1;
     }
-    else if (keycode == 50) {
+    else if (keycode == FWL_SDLK_LSHIFT) {
       // left shift
       sets.leftshift = 1;
     }
-    else if (keycode == 62) {
+    else if (keycode == FWL_SDLK_RSHIFT) {
       // right shift
       sets.rightshift = 1;
     } 
-    else if (keycode == 37) {
+    else if (keycode == FWL_SDLK_LCTRL) {
       // left ctrl
       sets.leftctrl = 1;
     }
-    else if (keycode == 109) {
+    else if (keycode == FWL_SDLK_RCTRL) {
       // right ctrl
       sets.rightctrl = 1;
     }
-    else if (keycode == 98) {
+    else if (keycode == FWL_SDLK_UP) {
       // up arrow, hold for adjusting individual loop volumes
       sets.upkey = 1;
     }
-    else if (keycode == 104) {
+    else if (keycode == FWL_SDLK_DOWN) {
       // down arrow, hold for adjusting individual loop volumes
       sets.downkey = 1;
     }
-    else if (keycode == 9) {
+    else if (keycode == FWL_SDLK_ESCAPE) {
       // escape key- exit!
       //app->getEMG()->BroadcastEvent(::new ExitSessionEvent(), this);
       //sdlthreadgo = 0;
       //printf("end\n");
     } else {
       // This keyrange (F1-F10) is set to select pulses
-      if ((keycode >= 67 &&
-           keycode <= 76)) {
+      if ((keycode >= FWL_SDLK_F1 &&
+           keycode <= FWL_SDLK_F10)) {
         if (sets.leftshift || sets.rightshift) {
           // Set subdivide
 
@@ -538,7 +624,7 @@ void SDLIO::handle_key(int keycode, char press) {
 
           // New method- Fn is translated to subdivide directly
           // And amplified by repeat presses of Fn
-          int newsub = (prevcnt+1) * (keycode-67+1);
+          int newsub = (prevcnt+1) * (keycode-FWL_SDLK_F1+1);
           app->getLOOPMGR()->SetSubdivide(newsub);
         }
       }
@@ -554,39 +640,39 @@ void SDLIO::handle_key(int keycode, char press) {
     }
   } else {
     // Release
-    if (keycode == 64) {
+    if (keycode == FWL_SDLK_LALT) {
       // left alt
       sets.leftalt = 0;
     }
-    else if (keycode == 113) {
+    else if (keycode == FWL_SDLK_RALT) {
       // right alt
       sets.rightalt = 0;
     }
-    else if (keycode == 65) {
+    else if (keycode == FWL_SDLK_SPACE) {
       // spacebar
       sets.spacekey = 0;
     }
-    else if (keycode == 50) {
+    else if (keycode == FWL_SDLK_LSHIFT) {
       // left shift
       sets.leftshift = 0;
     }
-    else if (keycode == 62) {
+    else if (keycode == FWL_SDLK_RSHIFT) {
       // right shift
       sets.rightshift = 0;
     }
-    else if (keycode == 37) {
+    else if (keycode == FWL_SDLK_LCTRL) {
       // left ctrl
       sets.leftctrl = 0;
     }
-    else if (keycode == 109) {
+    else if (keycode == FWL_SDLK_RCTRL) {
       // right ctrl
       sets.rightctrl = 0;
     }
-    else if (keycode == 98) {
+    else if (keycode == FWL_SDLK_UP) {
       // up arrow
       sets.upkey = 0;
     }
-    else if (keycode == 104) {
+    else if (keycode == FWL_SDLK_DOWN) {
       // down arrow
       sets.downkey = 0;
     }
@@ -611,7 +697,7 @@ void *SDLIO::run_sdl_thread(void *ptr)
     inst->joys = new SDL_Joystick *[inst->numjoy];
   printf("SDLIO: Detected %d joysticks..\n", inst->numjoy);
   for (int i = 0; i < inst->numjoy; i++) {
-    printf("  Joystick #%d: %s\n",i+1,SDL_JoystickName(i));
+    printf("  Joystick #%d: %s\n",i+1,SDL_JoystickNameForIndex(i));
     inst->joys[i] = SDL_JoystickOpen(i);
   }
   
@@ -690,8 +776,8 @@ void *SDLIO::run_sdl_thread(void *ptr)
 
       case SDL_KEYDOWN : 
         {
-          SDLKey sym = event.key.keysym.sym;
-          if (sym >= SDLK_FIRST && sym < SDLK_LAST) {
+          SDLKey sym = TranslateSDLKeycode(event.key.keysym.sym);
+          if (sym >= FWL_SDLK_FIRST && sym < FWL_SDLK_LAST) {
             // Mark the key as held down
             inst->keyheld[sym] = 1;
             
@@ -701,13 +787,13 @@ void *SDLIO::run_sdl_thread(void *ptr)
             
             kevt->down = 1;
             kevt->keysym = sym;
-            kevt->unicode = event.key.keysym.unicode;
+            kevt->unicode = 0;
             inst->app->getEMG()->BroadcastEventNow(kevt, inst);
             
             if (inst->app->getCFG()->IsDebugInfo())
               printf("KEYBOARD: Key pressed: %d (%s)\n",
                      kevt->keysym, GetSDLName(sym));
-            inst->handle_key(event.key.keysym.scancode,1);
+            inst->handle_key(sym,1);
           } else {
             printf("KEYBOARD: Invalid key\n");
           }
@@ -715,8 +801,8 @@ void *SDLIO::run_sdl_thread(void *ptr)
         break;
       case SDL_KEYUP :
         {
-          SDLKey sym = event.key.keysym.sym;
-          if (sym >= SDLK_FIRST && sym < SDLK_LAST) {
+          SDLKey sym = TranslateSDLKeycode(event.key.keysym.sym);
+          if (sym >= FWL_SDLK_FIRST && sym < FWL_SDLK_LAST) {
             // Mark the key as unheld
             inst->keyheld[sym] = 0;
             
@@ -725,16 +811,30 @@ void *SDLIO::run_sdl_thread(void *ptr)
               Event::GetEventByType(T_EV_Input_Key);
             kevt->down = 0;
             kevt->keysym = sym;
-            kevt->unicode = event.key.keysym.unicode;
+            kevt->unicode = 0;
             inst->app->getEMG()->BroadcastEventNow(kevt, inst);
             
             if (inst->app->getCFG()->IsDebugInfo())
               printf("KEYBOARD: Key released: %d (%s)\n",
                      kevt->keysym, GetSDLName(sym));
-            inst->handle_key(event.key.keysym.scancode,0);
+            inst->handle_key(sym,0);
             break;
           } else
             printf("KEYBOARD: Invalid key\n");
+        }
+        break;
+      case SDL_TEXTINPUT :
+        {
+          const int unicode = DecodeTextInputUnicode(event.text.text);
+          if (unicode != 0) {
+            KeyInputEvent *kevt = (KeyInputEvent *)
+              Event::GetEventByType(T_EV_Input_Key);
+
+            kevt->down = 1;
+            kevt->keysym = unicode;
+            kevt->unicode = unicode;
+            inst->app->getEMG()->BroadcastEventNow(kevt, inst);
+          }
         }
         break;
       }
