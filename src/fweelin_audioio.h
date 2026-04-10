@@ -64,11 +64,14 @@ class Processor;
 class AudioIO {
 public:
   AudioIO(Fweelin *app)
-    : sync_start_frame(0), timebase_master(0), sync_active(0),
+    : unit(0), iport{0, 0}, oport{0, 0}, capture{0, 0}, capture_abl(0),
+      capture_frames(0), bufsize(0),
+      sync_start_frame(0), timebase_master(0), sync_active(0),
       audio_thread(0), audio_thread_2(0),
       cpuload_sample_count(0), cpuload_sample_frames(0),
       cpuload_start_ticks(0), dsp_profile_enabled(0),
-      app(app) {
+      cpuload(0.0f), timescale(0.0f), srate(0),
+      repos(0), transport_roll(0), app(app), rp(0) {
     mach_timebase_info(&cpuload_timebase);
   }
 
@@ -87,14 +90,6 @@ public:
   // **Callbacks**
 
 #ifdef __MACOSX__
-  // Realtime process function for the AudioUnit render callback.
-  static OSStatus input_process (void *arg,
-                                 AudioUnitRenderActionFlags *ioActionFlags,
-                                 const AudioTimeStamp *inTimeStamp,
-                                 UInt32 inBusNumber,
-                                 UInt32 inNumberFrames,
-                                 AudioBufferList *ioData);
-
   // Realtime process function for the AudioUnit render callback.
   static OSStatus process (void *arg,
                            AudioUnitRenderActionFlags *ioActionFlags,
@@ -158,7 +153,6 @@ public:
 
 #ifdef __MACOSX__
   // Audio unit and per-callback buffer maps.
-  AudioUnit input_unit;
   AudioUnit unit;
   sample_t **iport[2], **oport[2];
   sample_t *capture[2];

@@ -977,6 +977,10 @@ class FloConfig {
   inline int GetVDelay() { return vdelay; };
   int vdelay;
 
+  // Preferred macOS/CoreAudio hardware buffer size in frames.
+  inline int GetPreferredAudioBufferFrames() { return preferred_audio_buffer_frames; };
+  int preferred_audio_buffer_frames;
+
   // # of samples in visual oscilloscope buffer
   nframes_t scope_sample_len;
   inline nframes_t GetScopeSampleLen() { return scope_sample_len; };

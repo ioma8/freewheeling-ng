@@ -60,6 +60,11 @@ static inline nframes_t audio_max_frames_per_slice(nframes_t device_frames) {
           device_frames : kPreferredFramesPerSlice);
 }
 
+static inline UInt32 choose_requested_buffer_frames(UInt32 preferred_frames,
+                                                    UInt32 current_frames) {
+  return (preferred_frames > 0 ? preferred_frames : current_frames);
+}
+
 static void register_audio_thread_if_needed(AudioIO *inst, pthread_t thread) {
   if (inst->audio_thread == 0) {
     inst->audio_thread = thread;
@@ -77,34 +82,6 @@ static void register_audio_thread_if_needed(AudioIO *inst, pthread_t thread) {
 
   if (pthread_equal(inst->audio_thread_2, thread))
     return;
-}
-
-OSStatus AudioIO::input_process(void *arg,
-                                AudioUnitRenderActionFlags *ioActionFlags,
-                                const AudioTimeStamp *inTimeStamp,
-                                UInt32 inBusNumber,
-                                UInt32 inNumberFrames,
-                                AudioBufferList */*ioData*/) {
-  AudioIO *inst = static_cast<AudioIO *>(arg);
-  register_audio_thread_if_needed(inst, pthread_self());
-
-  inst->capture_abl->mBuffers[0].mDataByteSize =
-    inst->capture_frames * sizeof(sample_t);
-  inst->capture_abl->mBuffers[1].mDataByteSize =
-    inst->capture_frames * sizeof(sample_t);
-
-  OSStatus err = AudioUnitRender(inst->input_unit,
-                                 ioActionFlags,
-                                 inTimeStamp,
-                                 inBusNumber,
-                                 inNumberFrames,
-                                 inst->capture_abl);
-  if (err != noErr) {
-    memset(inst->capture[0], 0, sizeof(sample_t) * inst->capture_frames);
-    memset(inst->capture[1], 0, sizeof(sample_t) * inst->capture_frames);
-  }
-
-  return noErr;
 }
 
 OSStatus AudioIO::process(void *arg,
@@ -125,6 +102,21 @@ OSStatus AudioIO::process(void *arg,
 
   if (inst->cpuload_sample_count == 0)
     inst->cpuload_start_ticks = mach_absolute_time();
+
+  inst->capture_abl->mBuffers[0].mDataByteSize =
+    inst->capture_frames * sizeof(sample_t);
+  inst->capture_abl->mBuffers[1].mDataByteSize =
+    inst->capture_frames * sizeof(sample_t);
+  OSStatus render_err = AudioUnitRender(inst->unit,
+                                        ioActionFlags,
+                                        inTimeStamp,
+                                        1,
+                                        inNumberFrames,
+                                        inst->capture_abl);
+  if (render_err != noErr) {
+    memset(inst->capture[0], 0, sizeof(sample_t) * inst->capture_frames);
+    memset(inst->capture[1], 0, sizeof(sample_t) * inst->capture_frames);
+  }
 
   inst->app->getEMG()->WakeupIfNeeded();
   inst->app->getMMG()->WakeupIfNeeded();
@@ -190,48 +182,18 @@ int AudioIO::open() {
   desc.componentSubType = kAudioUnitSubType_HALOutput;
   desc.componentManufacturer = kAudioUnitManufacturer_Apple;
 
-  AudioComponent comp_in = AudioComponentFindNext(0, &desc);
-  if (comp_in == 0) {
-    fprintf(stderr, "AUDIO: cannot find HAL input unit\n");
-    return 1;
-  }
-  if (AudioComponentInstanceNew(comp_in, &input_unit) != noErr) {
-    fprintf(stderr, "AUDIO: cannot create HAL input unit\n");
-    return 1;
-  }
-
   AudioComponent comp = AudioComponentFindNext(0, &desc);
   if (comp == 0) {
-    fprintf(stderr, "AUDIO: cannot find HAL output unit\n");
+    fprintf(stderr, "AUDIO: cannot find HAL audio unit\n");
     return 1;
   }
 
   if (AudioComponentInstanceNew(comp, &unit) != noErr) {
-    fprintf(stderr, "AUDIO: cannot create HAL output unit\n");
+    fprintf(stderr, "AUDIO: cannot create HAL audio unit\n");
     return 1;
   }
 
   UInt32 enable = 1;
-  if (AudioUnitSetProperty(input_unit,
-                           kAudioOutputUnitProperty_EnableIO,
-                           kAudioUnitScope_Input,
-                           1,
-                           &enable,
-                           sizeof(enable)) != noErr) {
-    fprintf(stderr, "AUDIO: cannot enable input on HAL input unit\n");
-    return 1;
-  }
-  enable = 0;
-  if (AudioUnitSetProperty(input_unit,
-                           kAudioOutputUnitProperty_EnableIO,
-                           kAudioUnitScope_Output,
-                           0,
-                           &enable,
-                           sizeof(enable)) != noErr) {
-    fprintf(stderr, "AUDIO: cannot disable output on HAL input unit\n");
-    return 1;
-  }
-  enable = 1;
   if (AudioUnitSetProperty(unit,
                            kAudioOutputUnitProperty_EnableIO,
                            kAudioUnitScope_Input,
@@ -267,15 +229,6 @@ int AudioIO::open() {
     fprintf(stderr, "AUDIO: cannot query default input device\n");
     return 1;
   }
-  if (AudioUnitSetProperty(input_unit,
-                           kAudioOutputUnitProperty_CurrentDevice,
-                           kAudioUnitScope_Global,
-                           0,
-                           &device,
-                           sizeof(device)) != noErr) {
-    fprintf(stderr, "AUDIO: cannot set input device\n");
-    return 1;
-  }
 
   AudioDeviceID out_device = kAudioObjectUnknown;
   size = sizeof(out_device);
@@ -293,12 +246,20 @@ int AudioIO::open() {
     fprintf(stderr, "AUDIO: cannot query default output device\n");
     return 1;
   }
+  AudioDeviceID current_device = out_device;
+  if (device != out_device) {
+    fprintf(stderr,
+            "AUDIO: low-latency macOS path requires matching default input/output devices.\n"
+            "AUDIO: default input=%u output=%u; using output device for full-duplex HAL.\n",
+            (unsigned) device,
+            (unsigned) out_device);
+  }
   if (AudioUnitSetProperty(unit,
                            kAudioOutputUnitProperty_CurrentDevice,
                            kAudioUnitScope_Global,
                            0,
-                           &out_device,
-                           sizeof(out_device)) != noErr) {
+                           &current_device,
+                           sizeof(current_device)) != noErr) {
     fprintf(stderr, "AUDIO: cannot set current device\n");
     return 1;
   }
@@ -310,7 +271,7 @@ int AudioIO::open() {
     kAudioObjectPropertyScopeGlobal,
     kAudioObjectPropertyElementMain
   };
-  if (AudioObjectGetPropertyData(out_device,
+  if (AudioObjectGetPropertyData(current_device,
                                  &rate_addr,
                                  0,
                                  0,
@@ -342,15 +303,6 @@ int AudioIO::open() {
     fprintf(stderr, "AUDIO: cannot set output stream format\n");
     return 1;
   }
-  if (AudioUnitSetProperty(input_unit,
-                           kAudioUnitProperty_StreamFormat,
-                           kAudioUnitScope_Output,
-                           1,
-                           &fmt,
-                           sizeof(fmt)) != noErr) {
-    fprintf(stderr, "AUDIO: cannot set input stream format\n");
-    return 1;
-  }
   if (AudioUnitSetProperty(unit,
                            kAudioUnitProperty_StreamFormat,
                            kAudioUnitScope_Output,
@@ -361,40 +313,63 @@ int AudioIO::open() {
     return 1;
   }
 
-  UInt32 max_frames = audio_max_frames_per_slice(512);
-
-  if (AudioUnitSetProperty(input_unit,
-                           kAudioUnitProperty_MaximumFramesPerSlice,
-                           kAudioUnitScope_Global,
-                           0,
-                           &max_frames,
-                           sizeof(max_frames)) != noErr) {
-    fprintf(stderr, "AUDIO: cannot set input max frames per slice\n");
-    return 1;
+  UInt32 frames = 512;
+  size = sizeof(frames);
+  AudioObjectPropertyAddress frame_addr = {
+    kAudioDevicePropertyBufferFrameSize,
+    kAudioObjectPropertyScopeGlobal,
+    kAudioObjectPropertyElementMain
+  };
+  if (AudioObjectGetPropertyData(current_device,
+                                 &frame_addr,
+                                 0,
+                                 0,
+                                 &size,
+                                 &frames) != noErr || frames == 0) {
+    frames = 512;
   }
+
+  const UInt32 requested_frames = choose_requested_buffer_frames(
+      static_cast<UInt32>(app->getCFG()->GetPreferredAudioBufferFrames()),
+      frames);
+  bool used_fallback = false;
+  const UInt32 fallback_candidates[] = {requested_frames, 64, 128, 256, 512};
+  for (const UInt32 candidate : fallback_candidates) {
+    if (candidate == 0)
+      continue;
+    UInt32 frames_to_set = candidate;
+    if (AudioObjectSetPropertyData(current_device,
+                                   &frame_addr,
+                                   0,
+                                   0,
+                                   sizeof(frames_to_set),
+                                   &frames_to_set) == noErr) {
+      used_fallback = (candidate != requested_frames);
+      break;
+    }
+  }
+  size = sizeof(frames);
+  if (AudioObjectGetPropertyData(current_device,
+                                 &frame_addr,
+                                 0,
+                                 0,
+                                 &size,
+                                 &frames) != noErr || frames == 0) {
+    frames = 512;
+  }
+
+  UInt32 max_frames = audio_max_frames_per_slice(frames);
   if (AudioUnitSetProperty(unit,
                            kAudioUnitProperty_MaximumFramesPerSlice,
                            kAudioUnitScope_Global,
                            0,
                            &max_frames,
                            sizeof(max_frames)) != noErr) {
-    fprintf(stderr, "AUDIO: cannot set output max frames per slice\n");
+    fprintf(stderr, "AUDIO: cannot set max frames per slice\n");
     return 1;
   }
 
   AURenderCallbackStruct cb;
-  cb.inputProc = input_process;
-  cb.inputProcRefCon = this;
-  if (AudioUnitSetProperty(input_unit,
-                           kAudioOutputUnitProperty_SetInputCallback,
-                           kAudioUnitScope_Global,
-                           0,
-                           &cb,
-                           sizeof(cb)) != noErr) {
-    fprintf(stderr, "AUDIO: cannot set input callback\n");
-    return 1;
-  }
-
   cb.inputProc = process;
   cb.inputProcRefCon = this;
   if (AudioUnitSetProperty(unit,
@@ -407,30 +382,9 @@ int AudioIO::open() {
     return 1;
   }
 
-  if (AudioUnitInitialize(input_unit) != noErr) {
-    fprintf(stderr, "AUDIO: cannot initialize input audio unit\n");
-    return 1;
-  }
-
   if (AudioUnitInitialize(unit) != noErr) {
     fprintf(stderr, "AUDIO: cannot initialize audio unit\n");
     return 1;
-  }
-
-  UInt32 frames = 512;
-  size = sizeof(frames);
-  AudioObjectPropertyAddress frame_addr = {
-    kAudioDevicePropertyBufferFrameSize,
-    kAudioObjectPropertyScopeGlobal,
-    kAudioObjectPropertyElementMain
-  };
-  if (AudioObjectGetPropertyData(device,
-                                 &frame_addr,
-                                 0,
-                                 0,
-                                 &size,
-                                 &frames) != noErr || frames == 0) {
-    frames = 512;
   }
 
   bufsize = frames;
@@ -471,6 +425,10 @@ int AudioIO::open() {
          (unsigned) srate,
          (unsigned) bufsize,
          (unsigned) capture_frames);
+  printf("AUDIO: preferred buffer request %u frames, actual device buffer %u%s\n",
+         (unsigned) requested_frames,
+         (unsigned) bufsize,
+         (used_fallback ? " (fallback accepted)" : ""));
   printf("AUDIO: using %d external inputs, %d total inputs\n",
          ab->numins_ext,
          ab->numins);
@@ -482,13 +440,8 @@ int AudioIO::activate(Processor *rp) {
   this->rp = rp;
   dsp_profile_enabled = (DspProfile::Enabled() ? 1 : 0);
 
-  if (AudioOutputUnitStart(input_unit) != noErr) {
-    fprintf(stderr, "AUDIO: cannot start input audio unit\n");
-    return 1;
-  }
   if (AudioOutputUnitStart(unit) != noErr) {
     fprintf(stderr, "AUDIO: cannot start audio unit\n");
-    AudioOutputUnitStop(input_unit);
     return 1;
   }
 
@@ -510,12 +463,6 @@ void AudioIO::close() {
   if (dsp_profile_enabled)
     DspProfile::PrintReport(stderr);
 
-  if (input_unit != 0) {
-    AudioOutputUnitStop(input_unit);
-    AudioUnitUninitialize(input_unit);
-    AudioComponentInstanceDispose(input_unit);
-    input_unit = 0;
-  }
   if (unit != 0) {
     AudioOutputUnitStop(unit);
     AudioUnitUninitialize(unit);
