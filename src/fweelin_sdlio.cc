@@ -50,6 +50,7 @@
 
 #include "fweelin_sdlio.h"
 #include "fweelin_core.h"
+#include "fweelin_signal.h"
 
 static SDLKey TranslateSDLKeycode(SDL_Keycode keycode) {
   if ((keycode >= 32 && keycode <= 126) ||
@@ -716,8 +717,17 @@ void *SDLIO::run_sdl_thread(void *ptr)
   inst->app->getEMG()->ListenEvent(inst,0,T_EV_ExitSession);
 
   while (inst->sdlthreadgo) {
-    if (SDL_WaitEvent(&event)) {
+    if (fweelin_shutdown_requested()) {
+      inst->sdlthreadgo = 0;
+      break;
+    }
+
+    if (SDL_WaitEventTimeout(&event, 100)) {
       switch (event.type) {
+      case SDL_QUIT :
+        inst->sdlthreadgo = 0;
+        break;
+
       case SDL_JOYBUTTONDOWN :
       case SDL_JOYBUTTONUP :
         {
@@ -783,6 +793,20 @@ void *SDLIO::run_sdl_thread(void *ptr)
 
       case SDL_KEYDOWN : 
         {
+          if (event.key.repeat != 0 && !inst->key_repeat_enabled)
+            break;
+
+#ifdef __MACOSX__
+          if ((event.key.keysym.mod & KMOD_GUI) != 0 &&
+              event.key.keysym.sym == SDLK_q) {
+            SDL_Event quit_event;
+            SDL_zero(quit_event);
+            quit_event.type = SDL_QUIT;
+            SDL_PushEvent(&quit_event);
+            break;
+          }
+#endif
+
           SDLKey sym = TranslateSDLKeycode(event.key.keysym.sym);
           if (sym >= FWL_SDLK_FIRST && sym < FWL_SDLK_LAST) {
             // Mark the key as held down
@@ -791,15 +815,16 @@ void *SDLIO::run_sdl_thread(void *ptr)
             // Now generate an input event..
             KeyInputEvent *kevt = (KeyInputEvent *) 
               Event::GetEventByType(T_EV_Input_Key);
-            
-            kevt->down = 1;
-            kevt->keysym = sym;
-            kevt->unicode = 0;
-            inst->app->getEMG()->BroadcastEventNow(kevt, inst);
+            if (kevt != nullptr) {
+              kevt->down = 1;
+              kevt->keysym = sym;
+              kevt->unicode = 0;
+              inst->app->getEMG()->BroadcastEventNow(kevt, inst);
+            }
             
             if (inst->app->getCFG()->IsDebugInfo())
               printf("KEYBOARD: Key pressed: %d (%s)\n",
-                     kevt->keysym, GetSDLName(sym));
+                     sym, GetSDLName(sym));
             inst->handle_key(sym,1);
           } else {
             printf("KEYBOARD: Invalid key\n");
@@ -816,14 +841,16 @@ void *SDLIO::run_sdl_thread(void *ptr)
             // Now generate an input event..
             KeyInputEvent *kevt = (KeyInputEvent *) 
               Event::GetEventByType(T_EV_Input_Key);
-            kevt->down = 0;
-            kevt->keysym = sym;
-            kevt->unicode = 0;
-            inst->app->getEMG()->BroadcastEventNow(kevt, inst);
+            if (kevt != nullptr) {
+              kevt->down = 0;
+              kevt->keysym = sym;
+              kevt->unicode = 0;
+              inst->app->getEMG()->BroadcastEventNow(kevt, inst);
+            }
             
             if (inst->app->getCFG()->IsDebugInfo())
               printf("KEYBOARD: Key released: %d (%s)\n",
-                     kevt->keysym, GetSDLName(sym));
+                     sym, GetSDLName(sym));
             inst->handle_key(sym,0);
             break;
           } else
@@ -832,15 +859,18 @@ void *SDLIO::run_sdl_thread(void *ptr)
         break;
       case SDL_TEXTINPUT :
         {
-          const int unicode = DecodeTextInputUnicode(event.text.text);
-          if (unicode != 0) {
+          if (inst->unicode_input_enabled) {
+            const int unicode = DecodeTextInputUnicode(event.text.text);
+            if (unicode != 0) {
             KeyInputEvent *kevt = (KeyInputEvent *)
               Event::GetEventByType(T_EV_Input_Key);
-
-            kevt->down = 1;
-            kevt->keysym = unicode;
-            kevt->unicode = unicode;
-            inst->app->getEMG()->BroadcastEventNow(kevt, inst);
+              if (kevt != nullptr) {
+                kevt->down = 1;
+                kevt->keysym = unicode;
+                kevt->unicode = unicode;
+                inst->app->getEMG()->BroadcastEventNow(kevt, inst);
+              }
+            }
           }
         }
         break;

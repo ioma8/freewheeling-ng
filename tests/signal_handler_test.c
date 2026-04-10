@@ -39,5 +39,12 @@ int main(void) {
   assert(strstr(hooks.buffer, "SIGSEGV") != 0);
   assert(strstr(hooks.buffer, "deferred to a safe context") != 0);
   assert(hooks.exit_code == 128 + SIGSEGV);
+
+  fweelin_clear_shutdown_request();
+  assert(fweelin_shutdown_requested() == 0);
+  fweelin_request_shutdown_signal_handler(SIGTERM);
+  assert(fweelin_shutdown_requested() == SIGTERM);
+  fweelin_clear_shutdown_request();
+  assert(fweelin_shutdown_requested() == 0);
   return 0;
 }

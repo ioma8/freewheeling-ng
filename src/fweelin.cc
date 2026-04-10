@@ -54,9 +54,6 @@
 #include "fweelin_core.h"
 #include "fweelin_core_dsp.h"
 
-static void ignore_signal_handler(int /*sig*/) {
-}
-
 static void info_signal_handler(int sig) {
   fweelin_log_nonfatal_signal(sig);
 }
@@ -66,8 +63,6 @@ static void info_signal_handler(int sig) {
 extern "C" int FweelinAppMain(int /*argc*/, char *argv[]) {
   // Initialize the stack trace mechanism 
   StackTraceInit(argv[0], -1);
-
-  signal(SIGINT, ignore_signal_handler);
 
 #if !defined(WIN32)
   // Register signal handlers
@@ -86,7 +81,16 @@ extern "C" int FweelinAppMain(int /*argc*/, char *argv[]) {
   info_sact.sa_handler = info_signal_handler;
   sigaction(SIGUSR1, &info_sact, NULL);
   sigaction(SIGUSR2, &info_sact, NULL);
+
+  struct sigaction shutdown_sact;
+  sigemptyset(&shutdown_sact.sa_mask);
+  shutdown_sact.sa_flags = 0;
+  shutdown_sact.sa_handler = fweelin_request_shutdown_signal_handler;
+  sigaction(SIGINT, &shutdown_sact, NULL);
+  sigaction(SIGTERM, &shutdown_sact, NULL);
 #endif // WIN32
+
+  fweelin_clear_shutdown_request();
 
   Fweelin flo;
   

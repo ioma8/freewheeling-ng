@@ -1596,6 +1596,9 @@ void InputMatrix::ReceiveEvent(Event *ev, EventProducer *from) {
   int i = ev->GetType();
 
   if (ev->GetType() < T_EV_Last_Bindable) {
+    if (ev->echo)
+      return;
+
     EventHook *ev_hook = app->getCFG()->ev_hook;
     if (ev_hook == 0 || !ev_hook->HookEvent(ev,from)) {
       if (CRITTERS && ev->GetType() == T_EV_GoSub)
@@ -2044,10 +2047,22 @@ void FloConfig::ConfigureBasics(xmlDocPtr /*doc*/, xmlNode *gen) {
             stream_inputs[i] = 0;  // Assume not streamed
         }
       } else if ((n = xmlGetProp(cur_node,
+                                 (const xmlChar *)"audiobuffersize")) != 0) {
+        const int requested_frames = atoi((char *) n);
+        if (requested_frames > 0) {
+          preferred_audio_buffer_frames = requested_frames;
+          printf("CONFIG: Preferred audio buffer size: %d frames\n",
+                 preferred_audio_buffer_frames);
+        } else {
+          printf(FWEELIN_ERROR_COLOR_ON
+                 "CONFIG: Invalid preferred audio buffer size: %s\n"
+                 FWEELIN_ERROR_COLOR_OFF,
+                 (char *) n);
+        }
+      } else if ((n = xmlGetProp(cur_node,
                                  (const xmlChar *)"audioinputmonitoring")) != 0) {
         int intaudioins = AudioBuffers::GetIntAudioIns();
         monitor_inputs = new char[extaudioins + intaudioins];
-        char have_monitor = 0;
 
         // Assign stereo/mono and create input variables
         for (int i = 0; i < extaudioins + intaudioins; i++) {
@@ -2056,7 +2071,6 @@ void FloConfig::ConfigureBasics(xmlDocPtr /*doc*/, xmlNode *gen) {
             case 'Y' :
             case 'y' :
               monitor_inputs[i] = 1;
-              have_monitor = 1;
               printf("CONFIG: Input #%d is monitored\n",i+1);
               break;
 
@@ -2076,16 +2090,8 @@ void FloConfig::ConfigureBasics(xmlDocPtr /*doc*/, xmlNode *gen) {
               break;
             }
           } else
-            monitor_inputs[i] = 1;  // Assume monitoring
+            monitor_inputs[i] = 0;  // Assume no software monitoring
         }
-
-#ifdef __MACOSX__
-        if (!have_monitor) {
-          printf("CONFIG: Enabling software monitoring for macOS inputs.\n");
-          for (int i = 0; i < extaudioins; i++)
-            monitor_inputs[i] = 1;
-        }
-#endif
       } else if ((n = xmlGetProp(cur_node,
                                  (const xmlChar *)"externalaudioinputs")) != 0) {
         // # of inputs
@@ -3667,7 +3673,7 @@ FloConfig::FloConfig(Fweelin *app) : im(app),
   vorbis_encode_quality(0.5),
 
   num_triggers(1024), 
-  vdelay(50000), showdebug(0), 
+  vdelay(50000), preferred_audio_buffer_frames(128), showdebug(0), 
   layouts(0), fonts(0), displays(0), help(0),
                 
 #if USE_FLUIDSYNTH

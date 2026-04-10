@@ -159,8 +159,9 @@ void Event::SetupEventTypeTable(MemoryManager *mmgr) {
       // a sequence of events is sent.
 
 #define MIDI_EVENT_PREALLOCATION 50 // How many MIDI events to preallocate.
+#define KEY_EVENT_PREALLOCATION 512 // Keyboard can burst far above MIDI rates.
 
-      SET_ETYPE_NUMPREALLOC(T_EV_Input_Key,"key",KeyInputEvent,MIDI_EVENT_PREALLOCATION);
+      SET_ETYPE_NUMPREALLOC(T_EV_Input_Key,"key",KeyInputEvent,KEY_EVENT_PREALLOCATION);
       SET_ETYPE_NUMPREALLOC(T_EV_Input_JoystickButton,"joybutton",
                 JoystickButtonInputEvent,MIDI_EVENT_PREALLOCATION);
       SET_ETYPE_NUMPREALLOC(T_EV_Input_MIDIKey,"midikey",MIDIKeyInputEvent,MIDI_EVENT_PREALLOCATION);

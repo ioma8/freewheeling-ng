@@ -6,6 +6,7 @@
 static fweelin_signal_write_fn g_test_writer = 0;
 static fweelin_signal_exit_fn g_test_exiter = 0;
 static void *g_test_ctx = 0;
+static volatile sig_atomic_t g_shutdown_requested = 0;
 
 static size_t append_text(char *buf, size_t bufsz, size_t pos, const char *text) {
   while (pos + 1 < bufsz && *text != '\0')
@@ -86,6 +87,18 @@ void fweelin_log_nonfatal_signal(int sig) {
   while (msg[len] != '\0')
     len++;
   dispatch_write(msg, len);
+}
+
+void fweelin_request_shutdown_signal_handler(int sig) {
+  g_shutdown_requested = sig;
+}
+
+sig_atomic_t fweelin_shutdown_requested(void) {
+  return g_shutdown_requested;
+}
+
+void fweelin_clear_shutdown_request(void) {
+  g_shutdown_requested = 0;
 }
 
 void fweelin_fatal_signal_handler(int sig) {

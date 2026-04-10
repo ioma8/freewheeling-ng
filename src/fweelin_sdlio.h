@@ -61,7 +61,9 @@ class SDLKeyList {
 class SDLIO : public EventProducer, public EventListener {
 public:
   SDLIO (Fweelin *app) : app(app), numjoy(0), joys(nullptr), keyheld{},
-                         sdl_thread(), sdlthreadgo(0) {};
+                         sdl_thread(), sdlthreadgo(0),
+                         unicode_input_enabled(false),
+                         key_repeat_enabled(false) {};
   ~SDLIO() override = default;
 
   int activate ();
@@ -81,12 +83,15 @@ public:
   static const char *GetSDLName(SDLKey sym);
 
   inline void EnableUNICODE(int enable) {
-    if (enable)
+    unicode_input_enabled = (enable != 0);
+    if (unicode_input_enabled)
       SDL_StartTextInput();
     else
       SDL_StopTextInput();
   };
-  inline void EnableKeyRepeat(int /*enable*/) {};
+  inline void EnableKeyRepeat(int enable) {
+    key_repeat_enabled = (enable != 0);
+  };
 
   // SDL event handler thread
   static void *run_sdl_thread (void *ptr);
@@ -113,6 +118,8 @@ protected:
 
   pthread_t sdl_thread;
   char sdlthreadgo;
+  bool unicode_input_enabled;
+  bool key_repeat_enabled;
 };
 
 #endif

@@ -2,6 +2,7 @@
 #define __FWEELIN_SIGNAL_H
 
 #include <stddef.h>
+#include <signal.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -13,6 +14,9 @@ typedef void (*fweelin_signal_exit_fn)(int code, void *ctx);
 size_t fweelin_format_signal_message(int sig, char *buf, size_t bufsz);
 void fweelin_log_nonfatal_signal(int sig);
 void fweelin_fatal_signal_handler(int sig);
+void fweelin_request_shutdown_signal_handler(int sig);
+sig_atomic_t fweelin_shutdown_requested(void);
+void fweelin_clear_shutdown_request(void);
 
 void fweelin_set_signal_test_hooks(fweelin_signal_write_fn writer,
                                    fweelin_signal_exit_fn exiter,
