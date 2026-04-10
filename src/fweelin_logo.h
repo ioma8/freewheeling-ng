@@ -17,7 +17,7 @@
    You should have received a copy of the GNU General Public License
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
-static const struct {
+static constexpr struct {
   unsigned int   width;
   unsigned int   height;
   unsigned int   bytes_per_pixel; /* 3:RGB, 4:RGBA */ 
@@ -1258,4 +1258,3 @@ static const struct {
   "\0\0\0\30\0\0\0\20\0\0\0\12\0\0\0\6\0\0\0\3\0\0\0\2\0\0\0\1\0\0\0\1\0\0\0"
   "\1",
 };
-

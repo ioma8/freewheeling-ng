@@ -234,7 +234,7 @@ class InputMatrix : public EventProducer, public EventListener {
 
   // Sets the given variable to the given value- string is interpreted
   // based on variable type
-  void SetVariable (UserVariable *var, char *value);
+  void SetVariable (UserVariable *var, const char *value);
 
   // Called during configuration to create user defined variables
   void CreateVariable (xmlNode *declare);
@@ -263,7 +263,7 @@ class InputMatrix : public EventProducer, public EventListener {
   // creates 1 math operation +12
   // The expression may also reference parameters in event 'ref'
   // and these references will be extracted
-  ParsedExpression *ParseExpression(char *str, Event *ref, 
+  ParsedExpression *ParseExpression(const char *str, Event *ref,
                                     char enable_keynames = 0);
 
  private:
@@ -789,10 +789,10 @@ class FloConfig {
 
   // Creates an empty variable based on the given name. The config file
   // can then refer to the variable
-  UserVariable *AddEmptyVariable(char *name);
+  UserVariable *AddEmptyVariable(const char *name);
 
   // Returns a pointer to the given variable
-  UserVariable *GetVariable(char *name);
+  UserVariable *GetVariable(const char *name);
 
   // Makes the given variable into a system variable by linking it to
   // the pointer
@@ -831,13 +831,13 @@ class FloConfig {
 
   // Extracts an array of floats (delimited by character delim_char)
   // from the given string- returns size of array in 'size'
-  float *ExtractArray(char *n, int *size, char delim_char = ',');
+  float *ExtractArray(const char *n, int *size, char delim_char = ',');
   
   // Same, with ints
-  int *ExtractArrayInt(char *n, int *size, char delim_char = ',');
+  int *ExtractArrayInt(const char *n, int *size, char delim_char = ',');
   
   // Library path
-  inline char *GetLibraryPath() { 
+  inline const char *GetLibraryPath() {
     if (librarypath != 0)
       return librarypath; 
     else {

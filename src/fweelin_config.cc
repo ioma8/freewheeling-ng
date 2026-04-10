@@ -638,7 +638,7 @@ SDLKeyList *InputMatrix::ExtractKeys (char *str) {
   return first;
 };
 
-void InputMatrix::SetVariable (UserVariable *var, char *value) {
+void InputMatrix::SetVariable (UserVariable *var, const char *value) {
   // First, parse the value based on the variable type
   
   switch (var->type) {
@@ -1367,7 +1367,7 @@ void InputMatrix::ParseToken(char *str, CfgToken *dst, Event *ref,
 // creates 1 math operation +12
 // The expression may also reference parameters in event 'ref'
 // and these references will be extracted
-ParsedExpression *InputMatrix::ParseExpression(char *str, Event *ref,
+ParsedExpression *InputMatrix::ParseExpression(const char *str, Event *ref,
                                                char enable_keynames) {
   char opstr[CfgMathOperation::numops+1];
   char buf[255]; // Copy buf
@@ -1384,8 +1384,8 @@ ParsedExpression *InputMatrix::ParseExpression(char *str, Event *ref,
   opstr[i] = '\0';
 
   // Find the first occurance of an operator in string str
-  char *cur = strpbrk(str,opstr);
-  if (cur != 0) 
+  const char *cur = strpbrk(str,opstr);
+  if (cur != 0)
     firstopidx = (int) (cur - str);
   else
     firstopidx = -1;
@@ -1407,7 +1407,7 @@ ParsedExpression *InputMatrix::ParseExpression(char *str, Event *ref,
   while (cur != 0) {
     char op = *cur; // Store operand
     cur++;
-    char *next = strpbrk(cur,opstr);
+    const char *next = strpbrk(cur,opstr);
 
     // Copy the operand
     long len;
@@ -2199,7 +2199,7 @@ char FloConfig::IsStereoMaster() {
 
 // Extracts an array of floats (delimited by character delim_char)
 // from the given string- returns size of array in 'size'
-float *FloConfig::ExtractArray(char *n, int *size, char delim_char) {
+float *FloConfig::ExtractArray(const char *n, int *size, char delim_char) {
   char buf[255];
   strncpy(buf,n,254);
   buf[254] = '\0';
@@ -2233,7 +2233,7 @@ float *FloConfig::ExtractArray(char *n, int *size, char delim_char) {
   return array;
 };
 
-int *FloConfig::ExtractArrayInt(char *n, int *size, char delim_char) {
+int *FloConfig::ExtractArrayInt(const char *n, int *size, char delim_char) {
   char buf[255];
   strncpy(buf,n,254);
   buf[254] = '\0';
@@ -3512,9 +3512,9 @@ void FloConfig::CheckForHelp(xmlNode *n) {
 
 // Creates an empty variable based on the given name. The config file
 // can then refer to the variable
-UserVariable *FloConfig::AddEmptyVariable(char *name) {
+UserVariable *FloConfig::AddEmptyVariable(const char *name) {
   UserVariable *nw = new UserVariable();
-  if (name != 0) {
+  if (name != nullptr) {
     nw->name = new char[strlen(name)+1];
     strcpy(nw->name,name);
   }
@@ -3549,7 +3549,7 @@ void FloConfig::LinkSystemVariable(const char *name, CoreDataType type, char *pt
 };
 
 // Returns a pointer to the given variable
-UserVariable *FloConfig::GetVariable(char *name) {
+UserVariable *FloConfig::GetVariable(const char *name) {
   UserVariable *cur = im.vars;
   while (cur != 0) {
     if (cur->name != 0) {

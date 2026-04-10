@@ -111,12 +111,12 @@ public:
   int activate ();
   void close ();
 
-  char IsActive () { return videothreadgo; };
+  constexpr char IsActive () const { return videothreadgo; };
 
-  double GetVideoTime() { return video_time; };
+  constexpr double GetVideoTime() const { return video_time; };
 
   void SetVideoMode(char fullscreen);
-  char GetVideoMode() { return fullscreen; };
+  constexpr char GetVideoMode() const { return fullscreen; };
 
   void ReceiveEvent(Event *ev, EventProducer */*from*/) override;
 

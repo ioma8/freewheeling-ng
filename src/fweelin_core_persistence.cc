@@ -171,14 +171,13 @@ void LoopManager::AddLoopToLoadQueue(char *filename, int index, float vol) {
 }
 
 void LoopManager::AddLoopToBrowser(Browser *br, char *filename) {
-  char tmp[FWEELIN_OUTNAME_LEN];
-
   struct stat st;
   if (stat(filename, &st) == 0) {
-    char default_name =
-        br->GetDisplayName(filename, &st.st_mtime, tmp, FWEELIN_OUTNAME_LEN);
+    const Browser::DisplayNameResult display_name =
+        br->GetDisplayName(filename, &st.st_mtime);
 
-    br->AddItem(new LoopBrowserItem(st.st_mtime, tmp, default_name, filename),
+    br->AddItem(new LoopBrowserItem(st.st_mtime, display_name.name.c_str(),
+                                    display_name.used_default_name, filename),
                 1);
   }
 }
@@ -210,16 +209,16 @@ void LoopManager::SetupLoopBrowser() {
 }
 
 SceneBrowserItem *LoopManager::AddSceneToBrowser(Browser *br, char *filename) {
-  char tmp[FWEELIN_OUTNAME_LEN];
   SceneBrowserItem *ret = 0;
 
   struct stat st;
   if (stat(filename, &st) == 0) {
-    char default_name =
-        br->GetDisplayName(filename, &st.st_mtime, tmp, FWEELIN_OUTNAME_LEN);
+    const Browser::DisplayNameResult display_name =
+        br->GetDisplayName(filename, &st.st_mtime);
 
     br->AddItem(
-        ret = new SceneBrowserItem(st.st_mtime, tmp, default_name, filename),
+        ret = new SceneBrowserItem(st.st_mtime, display_name.name.c_str(),
+                                   display_name.used_default_name, filename),
         1);
   }
 
@@ -588,22 +587,22 @@ void LoopManager::RenameLoop(int loopid) {
   }
 }
 
-void LoopManager::ItemRenamed(char *nw) {
-  if (nw != 0) {
+void LoopManager::ItemRenamed(const char *nw) {
+  if (nw != nullptr) {
     const static char *exts[] = {
         app->getCFG()->GetAudioFileExt(rename_loop->format),
         FWEELIN_OUTPUT_DATA_EXT};
-    char *old_filename = 0, *new_filename = 0;
+    char *old_filename = nullptr, *new_filename = nullptr;
     rename_loop->RenameSaveable(app->getCFG()->GetLibraryPath(),
                                 FWEELIN_OUTPUT_LOOP_NAME, rename_loop->name, nw,
                                 exts, 2, &old_filename, &new_filename);
 
-    if (app->getBROWSER(B_Loop) != 0)
+    if (app->getBROWSER(B_Loop) != nullptr)
       app->getBROWSER(B_Loop)->ItemRenamedOnDisk(old_filename, new_filename, nw);
 
-    if (old_filename != 0)
+    if (old_filename != nullptr)
       delete[] old_filename;
-    if (new_filename != 0)
+    if (new_filename != nullptr)
       delete[] new_filename;
 
     RenameLoop(rename_loop, nw);

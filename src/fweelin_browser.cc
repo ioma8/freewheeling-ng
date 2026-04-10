@@ -33,9 +33,9 @@
 #include "fweelin_fluidsynth.h"
 #include "fweelin_browser.h"
 
-ItemRenamer::ItemRenamer (Fweelin *app, RenameCallback *cb, 
-                          char *oldname) : app(app), cb(cb) {
-  if (oldname == 0)
+ItemRenamer::ItemRenamer (Fweelin *app, RenameCallback *cb,
+                          const char *oldname) : app(app), cb(cb) {
+  if (oldname == nullptr)
     strcpy(rename_tmpbuf,"");
   else if (strlen(oldname)+1 >= (unsigned int) RENAME_BUF_SIZE) {
     strncpy(rename_tmpbuf,oldname,RENAME_BUF_SIZE-1);
@@ -180,7 +180,7 @@ void Browser::RemoveItem(int itemmatch) {
   UnlockBrowser();
 };
 
-void Browser::ItemRenamed(char *nw) {
+void Browser::ItemRenamed(const char *nw) {
   if (nw != 0) {
     // Assign new name and stop
     RenameItem(cur,nw);
@@ -194,18 +194,15 @@ void Browser::ItemRenamed(char *nw) {
     
     // If edit is blank, assign default name for onscreen display
     if (strlen(cur->name) == 0) {
-      char tmp[FWEELIN_OUTNAME_LEN];
-
-      if (GetType() == B_Loop) 
-        GetDisplayName(((LoopBrowserItem *) cur)->filename,
-                       &((LoopBrowserItem *) cur)->time,
-                       tmp,FWEELIN_OUTNAME_LEN);
+      DisplayNameResult display_name;
+      if (GetType() == B_Loop)
+        display_name = GetDisplayName(((LoopBrowserItem *) cur)->filename,
+                                      &((LoopBrowserItem *) cur)->time);
       else if (GetType() == B_Scene)
-        GetDisplayName(((SceneBrowserItem *) cur)->filename,
-                       &((SceneBrowserItem *) cur)->time,
-                       tmp,FWEELIN_OUTNAME_LEN);
+        display_name = GetDisplayName(((SceneBrowserItem *) cur)->filename,
+                                      &((SceneBrowserItem *) cur)->time);
 
-      RenameItem(cur,tmp);
+      RenameItem(cur, display_name.name.c_str());
       cur->default_name = 1;
     } else
       cur->default_name = 0;
@@ -266,18 +263,15 @@ void Browser::ItemRenamedOnDisk(const char *old_filename, const char *new_filena
         
     // If new name is blank, assign default name for onscreen display
     if (cur->name == 0 || strlen(cur->name) == 0) {
-      char tmp[FWEELIN_OUTNAME_LEN];
-
-      if (GetType() == B_Loop) 
-        GetDisplayName(((LoopBrowserItem *) cur)->filename,
-                       &((LoopBrowserItem *) cur)->time,
-                       tmp,FWEELIN_OUTNAME_LEN);
+      DisplayNameResult display_name;
+      if (GetType() == B_Loop)
+        display_name = GetDisplayName(((LoopBrowserItem *) cur)->filename,
+                                      &((LoopBrowserItem *) cur)->time);
       else if (GetType() == B_Scene)
-        GetDisplayName(((SceneBrowserItem *) cur)->filename,
-                       &((SceneBrowserItem *) cur)->time,
-                       tmp,FWEELIN_OUTNAME_LEN);
-      
-      RenameItem(cur,tmp);
+        display_name = GetDisplayName(((SceneBrowserItem *) cur)->filename,
+                                      &((SceneBrowserItem *) cur)->time);
+
+      RenameItem(cur, display_name.name.c_str());
       cur->default_name = 1;
     }
     else
@@ -289,9 +283,8 @@ void Browser::ItemRenamedOnDisk(const char *old_filename, const char *new_filena
 // (filename must refer to a file of the type this browser handles)
 // Write the name to outbuf, with max maxlen characters.
 // Returns nonzero if we used a 'default' name.
-char Browser::GetDisplayName(const char *filename, 
-                             time_t *filetime,
-                             char *outbuf, int maxlen) {
+Browser::DisplayNameResult Browser::GetDisplayName(const char *filename,
+                                                   time_t *filetime) {
   // Loop exists, use combination of time and hash as name
   size_t baselen = strlen(app->getCFG()->GetLibraryPath()) + 1;
   if (btype == B_Loop)
@@ -301,7 +294,7 @@ char Browser::GetDisplayName(const char *filename,
   else {
     printf("BROWSER: We don't support getting a display name for type %d\n",
            btype);
-    return 1;
+    return {"", true};
   }
 
   char sf_basename[FWEELIN_OUTNAME_LEN],
@@ -318,17 +311,16 @@ char Browser::GetDisplayName(const char *filename,
     Saveable::GetHashFirst(filename,(int) baselen,&hashshort_1,&hashshort_2);
     
     // Compose name for item
-    snprintf(outbuf,maxlen,"%c%c %s",hashshort_1,hashshort_2,ctime(filetime));
-    outbuf[maxlen-1] = '\0';
-    outbuf[strlen(outbuf)-1] = '\0'; // Cut off return character
+    char generated_name[FWEELIN_OUTNAME_LEN];
+    snprintf(generated_name, sizeof(generated_name), "%c%c %s",
+             hashshort_1, hashshort_2, ctime(filetime));
+    generated_name[sizeof(generated_name)-1] = '\0';
+    generated_name[strlen(generated_name)-1] = '\0'; // Cut off return character
 
-    return 1;
+    return {generated_name, true};
   } else {
     // Use name given in filename
-    strncpy(outbuf,sf_objname,maxlen);
-    outbuf[maxlen-1] = '\0';    
-
-    return 0;
+    return {sf_objname, false};
   }
 }
 
@@ -637,7 +629,7 @@ void LoopTray::ReceiveEvent(Event *ev, EventProducer *from) {
 // A loop was renamed from outside the loop tray
 // (loops can be renamed in layouts)
 // (or on disk)
-void LoopTray::ItemRenamedFromOutside(Loop *l, char *nw) {
+void LoopTray::ItemRenamedFromOutside(Loop *l, const char *nw) {
   if (l != 0 && nw != 0) {
     // Find the item that has been renamed
     {
@@ -657,7 +649,7 @@ void LoopTray::ItemRenamedFromOutside(Loop *l, char *nw) {
   }
 };
 
-void LoopTray::ItemRenamed(char *nw) {
+void LoopTray::ItemRenamed(const char *nw) {
   if (nw != 0) {
     // Assign new name and stop
     RenameItem(cur,nw);
@@ -1086,7 +1078,7 @@ void FloDisplaySnapshots::Rename (int idx) {
   }
 };
 
-void FloDisplaySnapshots::ItemRenamed(char *nw) {
+void FloDisplaySnapshots::ItemRenamed(const char *nw) {
   forceshow = 0;
   
   if (nw != 0) {

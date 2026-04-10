@@ -461,7 +461,7 @@ class iFileEncoder {
   // any simular processing should be put here
   virtual void Preprocess (sample_t *l, sample_t *r, nframes_t len) = 0;
 
-  inline char IsStereo() { return stereo; };
+  constexpr char IsStereo() const { return stereo; };
 
  protected:
 
@@ -559,7 +559,7 @@ class iFileDecoder {
   virtual void Stop() = 0;
 
   // Are we decoding in stereo? 
-  inline char IsStereo() { return stereo; };
+  constexpr char IsStereo() const { return stereo; };
 
  protected:
 

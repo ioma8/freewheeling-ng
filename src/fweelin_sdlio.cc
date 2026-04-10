@@ -135,7 +135,7 @@ static int DecodeTextInputUnicode(const char *text) {
 
 // ******** KEYBOARD / MOUSE / JOYSTICK HANDLER
 
-static const char *SDL_names[] = {
+static constexpr const char *SDL_names[] = {
   "", 
   "", 
   "", 

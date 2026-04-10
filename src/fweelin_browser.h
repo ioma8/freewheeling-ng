@@ -99,7 +99,7 @@ class BrowserCallback {
 class RenameCallback {
  public:
   virtual ~RenameCallback() = default;
-  virtual void ItemRenamed(char *nw) = 0;
+  virtual void ItemRenamed(const char *nw) = 0;
 };
 
 class RenameUIVars {
@@ -116,7 +116,7 @@ class ItemRenamer : public EventHook {
   static constexpr int RENAME_BUF_SIZE = 512; // Maximum length of item name
   static constexpr double BLINK_DELAY = 0.5;
 
-  ItemRenamer(Fweelin *app, RenameCallback *cb, char *oldname);
+  ItemRenamer(Fweelin *app, RenameCallback *cb, const char *oldname);
 
   ~ItemRenamer() override = default;
 
@@ -164,6 +164,11 @@ class ItemRenamer : public EventHook {
 class Browser : public FloDisplay, public EventListener, public EventProducer,
                 public RenameCallback {
  public:
+  struct DisplayNameResult {
+    std::string name;
+    bool used_default_name;
+  };
+
   Browser (int iid, 
            BrowserItemType btype, char xpand, int xpand_x1, int xpand_y1,
            int xpand_x2, int xpand_y2, float xpand_delay) : 
@@ -208,13 +213,11 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
 
   // Get the onscreen display name for a file with given name. 
   // (filename must refer to a file of the type this browser handles)
-  // Write the name to outbuf, with max maxlen characters.
-  // Returns nonzero if we used a 'default' name.
-  char GetDisplayName(const char *filename, time_t *filetime,
-                      char *outbuf, int maxlen);
+  [[nodiscard]] DisplayNameResult GetDisplayName(const char *filename,
+                                                 time_t *filetime);
 
   ItemRenamer *renamer; // Renamer instance, or null if we are not renaming
-  void ItemRenamed(char *nw) override; // Callback for renamer
+  void ItemRenamed(const char *nw) override; // Callback for renamer
   
   // Via this method, a browser is notified of a change to the on-disk name
   // of an item. For example, when a Loop in memory is renamed, we also
@@ -225,7 +228,7 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
   inline BrowserItemType GetType() { return btype; };
   FloDisplayType GetFloDisplayType() override { return FD_Browser; };
 
-  inline static const char *GetTypeName(BrowserItemType b) {
+  static constexpr const char *GetTypeName(BrowserItemType b) {
     switch (b) {
     case B_Scene_Tray :
       return "Scene Tray";
@@ -354,8 +357,8 @@ class LoopTray : public Browser {
 
   // Renaming
   void Rename(int loopid);
-  void ItemRenamed(char *nw) override;
-  void ItemRenamedFromOutside(Loop *l, char *nw);
+  void ItemRenamed(const char *nw) override;
+  void ItemRenamedFromOutside(Loop *l, const char *nw);
 
   int loopsize,   // Size of loops in tray
     basepos,      // Base (border) size in tray
@@ -589,21 +592,21 @@ class PatchBrowser : public Browser {
 class FloDisplaySnapshots : public FloDisplay, public RenameCallback
 {
  public:
-  FloDisplaySnapshots (Fweelin *app, int iid) : FloDisplay(iid), renamer(0),
+  FloDisplaySnapshots (Fweelin *app, int iid) : FloDisplay(iid), renamer(nullptr),
     app(app), firstidx(0), numdisp(-1) {
     pthread_mutex_init (&snaps_lock,0);
   };
-  ~FloDisplaySnapshots() { 
+  ~FloDisplaySnapshots() override {
      pthread_mutex_destroy (&snaps_lock);
   };
   
-  virtual FloDisplayType GetFloDisplayType() { return FD_Snapshots; };
+  FloDisplayType GetFloDisplayType() override { return FD_Snapshots; };
 
-  virtual void Draw(SDL_Surface *screen);
+  void Draw(SDL_Surface *screen) override;
 
   ItemRenamer *renamer; // Renamer instance, or null if we are not renaming
   int rename_idx;       // Index of snapshot we are renaming
-  virtual void ItemRenamed(char *nw); // Callback for renamer
+  void ItemRenamed(const char *nw) override; // Callback for renamer
   
   // Rename the snapshot with given index
   void Rename (int idx);

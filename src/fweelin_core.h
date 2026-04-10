@@ -556,22 +556,22 @@ class LoopTrayItem : public BrowserItem {
 // LoopBrowserItem is for loops in the library on disk
 class LoopBrowserItem : public BrowserItem {
  public:
-  LoopBrowserItem(time_t time, char *name, char default_name, char *fn) : 
+  LoopBrowserItem(time_t time, const char *name, char default_name, const char *fn) :
     BrowserItem(name,default_name), time(time) {
-    if (fn == 0)
-      filename = 0;
+    if (fn == nullptr)
+      filename = nullptr;
     else {
       // Copy filename
       filename = new char[strlen(fn)+1];
       strcpy(filename,fn);
       // Remove extension
       char *ext_ptr = strrchr(filename,'.');
-      if (ext_ptr != 0)
+      if (ext_ptr != nullptr)
         *ext_ptr = '\0';
     }
   };
   virtual ~LoopBrowserItem() {
-    if (filename != 0)
+    if (filename != nullptr)
       delete[] filename;
   };
 
@@ -590,17 +590,17 @@ class LoopBrowserItem : public BrowserItem {
 
 class SceneBrowserItem : public BrowserItem {
  public:
-  SceneBrowserItem(time_t time, char *name, char default_name, char *fn) : 
+  SceneBrowserItem(time_t time, const char *name, char default_name, const char *fn) :
     BrowserItem(name, default_name), time(time) {
-    if (fn == 0)
-      filename = 0;
+    if (fn == nullptr)
+      filename = nullptr;
     else {
       // Copy filename
       filename = new char[strlen(fn)+1];
       strcpy(filename,fn);
       // Remove extension
       char *ext_ptr = strrchr(filename,'.');
-      if (ext_ptr != 0)
+      if (ext_ptr != nullptr)
         *ext_ptr = '\0';
     }
   };
@@ -758,7 +758,7 @@ public:
   // We can only rename one loop at a time
   void RenameLoop(int loopid);
 
-  virtual void ItemRenamed(char *nw);
+  virtual void ItemRenamed(const char *nw);
   ItemRenamer *renamer; // Renamer instance, or null if we are not renaming
   Loop *rename_loop;    // Loop being renamed
 
@@ -846,15 +846,15 @@ public:
  protected:
 
   // Rename a loop in memory (threadsafe)
-  inline void RenameLoop(Loop *l, char *nw) {
+  inline void RenameLoop(Loop *l, const char *nw) {
     LockLoops();
-    if (l->name != 0) // Erase loop stored name
+    if (l->name != nullptr) // Erase loop stored name
       delete[] l->name;
-    if (nw != 0) {
+    if (nw != nullptr) {
       l->name = new char[strlen(nw)+1];
       strcpy(l->name,nw);
     } else
-      l->name = 0;
+      l->name = nullptr;
     UnlockLoops();
   };
 
