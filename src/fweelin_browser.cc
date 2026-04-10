@@ -24,6 +24,7 @@
 
 #include <math.h>
 #include <string.h>
+#include <assert.h>
 
 #include <pthread.h>
 #include <sched.h>
@@ -182,6 +183,8 @@ void Browser::RemoveItem(int itemmatch) {
 
 void Browser::ItemRenamed(const char *nw) {
   if (nw != 0) {
+    assert(cur != nullptr);
+    assert(renamer != nullptr);
     // Assign new name and stop
     RenameItem(cur,nw);
         
@@ -218,6 +221,7 @@ void Browser::ItemRenamed(const char *nw) {
 // rename it on disk, and the loop browser must be notified of this new name.
 void Browser::ItemRenamedOnDisk(const char *old_filename, const char *new_filename,
                                 const char *new_name) {
+  assert(new_name != nullptr);
   if (old_filename == nullptr ||
       new_filename == nullptr)
     return;
@@ -285,6 +289,9 @@ void Browser::ItemRenamedOnDisk(const char *old_filename, const char *new_filena
 // Returns nonzero if we used a 'default' name.
 Browser::DisplayNameResult Browser::GetDisplayName(const char *filename,
                                                    time_t *filetime) {
+  assert(app != nullptr);
+  assert(filename != nullptr);
+  assert(filetime != nullptr);
   // Loop exists, use combination of time and hash as name
   size_t baselen = strlen(app->getCFG()->GetLibraryPath()) + 1;
   if (btype == B_Loop)

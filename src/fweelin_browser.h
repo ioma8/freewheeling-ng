@@ -21,6 +21,8 @@
 #include "fweelin_event.h"
 #include "fweelin_config.h"
 
+#include <assert.h>
+
 class CircularMap;
 class MouseButtonInputEvent;
 class MouseMotionInputEvent;
@@ -38,6 +40,10 @@ enum ResizeType {
   RS_BottomRight
 };
 
+static_assert(RS_Off == 0, "ResizeType assumes RS_Off is the zero state");
+static_assert(RS_BottomRight == 9,
+              "ResizeType static ordering changed unexpectedly");
+
 enum BrowserItemType {
   B_Undefined = 0,
   B_Loop_Tray,  // Loop tray  (loaded loops)
@@ -48,6 +54,11 @@ enum BrowserItemType {
   B_Division,
   B_Last
 };
+
+static_assert(B_Undefined == 0,
+              "BrowserItemType assumes B_Undefined is the zero value");
+static_assert(B_Last == B_Division + 1,
+              "BrowserItemType sentinel must stay aligned with the last item");
 
 class BrowserItem {
  public:
@@ -160,6 +171,11 @@ class ItemRenamer : public EventHook {
 
   char renaming; // Nonzero if we are renaming
 };
+
+static_assert(ItemRenamer::RENAME_BUF_SIZE > 1,
+              "ItemRenamer buffer must allow at least one character plus terminator");
+static_assert(ItemRenamer::BLINK_DELAY > 0.0,
+              "ItemRenamer cursor blink delay must be positive");
 
 class Browser : public FloDisplay, public EventListener, public EventProducer,
                 public RenameCallback {
@@ -283,6 +299,7 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
 
   // Threadsafe item rename 
   inline void RenameItem(BrowserItem *i, const char *nw) {
+    assert(i != nullptr);
     LockBrowser();
     if (i->name != nullptr)
       delete[] i->name;
@@ -295,10 +312,10 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
   };
   
   inline void LockBrowser() {
-    pthread_mutex_lock (&browser_lock);
+    assert(pthread_mutex_lock(&browser_lock) == 0);
   };
   inline void UnlockBrowser() {
-    pthread_mutex_unlock (&browser_lock);
+    assert(pthread_mutex_unlock(&browser_lock) == 0);
   };
   
   protected:

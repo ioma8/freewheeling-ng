@@ -83,4 +83,9 @@ enum {
   FWL_SDLK_LAST = 323
 };
 
+static_assert(FWL_SDLK_UNKNOWN == FWL_SDLK_FIRST,
+              "SDL key compatibility range must start at SDLK_UNKNOWN");
+static_assert(FWL_SDLK_LAST == FWL_SDLK_UNDO + 1,
+              "SDL key compatibility range must end after SDLK_UNDO");
+
 #endif

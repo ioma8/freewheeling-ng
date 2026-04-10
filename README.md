@@ -37,7 +37,7 @@ systems without rewriting the application itself. The main changes are:
   instead of unsound cross-thread mutation
 - cleaned up large amounts of legacy warning noise and made the Xcode
   build warning-free at source level
-- modernized the Xcode project to use an explicit C++14 build, removed
+- modernized the Xcode project to use an explicit GNU++20 build, removed
   `-fpermissive`, and lowered the deployment target to macOS 11.0
 - refactored major top-level ownership in `Fweelin` to `std::unique_ptr`
   where the object model actually supports single ownership
@@ -92,6 +92,9 @@ Building on macOS
 ------------------
 
 The macOS project lives in `MacOSX/fweelin.xcodeproj`. The supported local flow uses the checked-in scripts in `scripts/`.
+
+The project now builds with an explicit GNU++20 language standard in both
+Xcode and the checked-in regression harness.
 
 To build it you need:
 

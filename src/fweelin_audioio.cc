@@ -316,7 +316,9 @@ int AudioIO::open() {
   memset(&fmt, 0, sizeof(fmt));
   fmt.mSampleRate = sample_rate;
   fmt.mFormatID = kAudioFormatLinearPCM;
-  fmt.mFormatFlags = kAudioFormatFlagsNativeFloatPacked | kAudioFormatFlagIsNonInterleaved;
+  fmt.mFormatFlags =
+      static_cast<AudioFormatFlags>(kAudioFormatFlagsNativeFloatPacked) |
+      static_cast<AudioFormatFlags>(kAudioFormatFlagIsNonInterleaved);
   fmt.mBytesPerPacket = sizeof(Float32);
   fmt.mFramesPerPacket = 1;
   fmt.mBytesPerFrame = sizeof(Float32);

@@ -24,6 +24,8 @@
 
 #include <sys/time.h>
 
+#include <iterator>
+
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -459,6 +461,11 @@ static constexpr const char *SDL_names[] = {
   "power", 
   "euro", 
   "undo"};
+
+static_assert(FWL_SDLK_FIRST == 0,
+              "SDL key compatibility table assumes zero-based indexing");
+static_assert(std::size(SDL_names) == FWL_SDLK_LAST,
+              "SDL_names must cover the full SDL compatibility key range");
 
 SDLKey SDLIO::GetSDLKey(const char *keyname) {
   SDLKey ky;

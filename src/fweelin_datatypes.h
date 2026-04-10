@@ -38,6 +38,10 @@ enum CoreDataType {
   T_invalid
 };
 
+static_assert(T_char == 0, "CoreDataType assumes T_char is the zero value");
+static_assert(T_invalid == 7,
+              "CoreDataType sentinel changed; update conversion/storage code");
+
 CoreDataType GetCoreDataType(char *name);
 
 class Range {
@@ -526,6 +530,17 @@ class UserVariable {
 
   UserVariable *next;
 };
+
+static_assert(CFG_VAR_SIZE >= static_cast<int>(sizeof(char)),
+              "CFG_VAR_SIZE must hold char values");
+static_assert(CFG_VAR_SIZE >= static_cast<int>(sizeof(int)),
+              "CFG_VAR_SIZE must hold int values");
+static_assert(CFG_VAR_SIZE >= static_cast<int>(sizeof(long)),
+              "CFG_VAR_SIZE must hold long values");
+static_assert(CFG_VAR_SIZE >= static_cast<int>(sizeof(float)),
+              "CFG_VAR_SIZE must hold float values");
+static_assert(CFG_VAR_SIZE >= static_cast<int>(sizeof(Range)),
+              "CFG_VAR_SIZE must hold Range values");
 
 // Abstract class to allow updating RT data structures with a new # of reader and writer threads
 class RTDataStruct_Updater {

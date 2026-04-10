@@ -2382,46 +2382,50 @@ void FileStreamer::process(char pre, nframes_t len, AudioBuffers *ab) {
         // Encode thread is not keeping up. We are about to wrap around the ring buffer
         printf("DISK: FileStreamer encoder thread is behind. CPU use too high / too many streams.\n");
 
-      if (outpos + len < outbuflen) {
-        memcpy(&outbuf[0][outpos],in[0],sizeof(sample_t) * len);
-        memcpy(&outbuf[1][outpos],in[1],sizeof(sample_t) * len);
-        outpos += len;
+      nframes_t writepos = outpos;
+      if (writepos + len < outbuflen) {
+        memcpy(&outbuf[0][writepos],in[0],sizeof(sample_t) * len);
+        memcpy(&outbuf[1][writepos],in[1],sizeof(sample_t) * len);
+        writepos += len;
       }
       else {
         // Wrap case- byte-by-byte
         nframes_t n;
         sample_t *o_l = outbuf[0],
           *o_r = outbuf[1];
-        for (n = 0; outpos < outbuflen; outpos++, n++) {
-          o_l[outpos] = b_l[n];
-          o_r[outpos] = b_r[n];
+        for (n = 0; writepos < outbuflen; writepos++, n++) {
+          o_l[writepos] = b_l[n];
+          o_r[writepos] = b_r[n];
         }
-        outpos = 0;
+        writepos = 0;
         wrap = 1; 
-        for (; n < len; outpos++, n++) {
-          o_l[outpos] = b_l[n];
-          o_r[outpos] = b_r[n];
+        for (; n < len; writepos++, n++) {
+          o_l[writepos] = b_l[n];
+          o_r[writepos] = b_r[n];
         }
       }
+      outpos = writepos;
     } else {
       // Mono
       enc->Preprocess(b_l,0,len);
 
-      if (outpos + len < outbuflen) {
-        memcpy(&outbuf[0][outpos],in[0],sizeof(sample_t) * len);
-        outpos += len;
+      nframes_t writepos = outpos;
+      if (writepos + len < outbuflen) {
+        memcpy(&outbuf[0][writepos],in[0],sizeof(sample_t) * len);
+        writepos += len;
       }
       else {
         // Wrap case- byte-by-byte
         nframes_t n;
         sample_t *o_l = outbuf[0];
-        for (n = 0; outpos < outbuflen; outpos++, n++)
-          o_l[outpos] = b_l[n];
-        outpos = 0;
+        for (n = 0; writepos < outbuflen; writepos++, n++)
+          o_l[writepos] = b_l[n];
+        writepos = 0;
         wrap = 1; 
-        for (; n < len; outpos++, n++)
-          o_l[outpos] = b_l[n];
+        for (; n < len; writepos++, n++)
+          o_l[writepos] = b_l[n];
       }
+      outpos = writepos;
     }
   }
 };
@@ -2434,11 +2438,13 @@ void FileStreamer::ReceiveEvent(Event *ev, EventProducer */*from*/) {
     // Record the beat
     if (timingfd != 0) {
       nbeats++;
-      marks[mkwriteidx].markofs = app->getRP()->GetSampleCnt()-startcnt;
-      marks[mkwriteidx].data = nbeats;
-      mkwriteidx++;
-      if (mkwriteidx >= MARKERBUFLEN)
-        mkwriteidx = 0;
+      int writeidx = mkwriteidx;
+      marks[writeidx].markofs = app->getRP()->GetSampleCnt()-startcnt;
+      marks[writeidx].data = nbeats;
+      writeidx++;
+      if (writeidx >= MARKERBUFLEN)
+        writeidx = 0;
+      mkwriteidx = writeidx;
     }
     break;
 
@@ -2455,7 +2461,7 @@ void *FileStreamer::run_encode_thread (void *ptr) {
   // BMG manage thread? It could still be a core DSP processor, no?
   while (inst->threadgo || inst->writerstatus != STATUS_STOPPED) {
     switch (inst->writerstatus) {
-    case STATUS_RUNNING:
+    case STATUS_RUNNING: {
       // We're running, so feed data to the chosen audio encoder.
       // Make a local copy of outpos-- because it is liable to change
       // during this loop!-- RT thread
@@ -2491,17 +2497,20 @@ void *FileStreamer::run_encode_thread (void *ptr) {
       }
       
       // Now dump markers to gnusound USX for later edit points
-      while (inst->mkreadidx != inst->mkwriteidx) {
+      int readidx = inst->mkreadidx;
+      while (readidx != inst->mkwriteidx) {
         if (inst->timingfd != 0)
           fprintf(inst->timingfd,"%ld=4 0 0.000000 lb%d\n",
-                  (long int) inst->marks[inst->mkreadidx].markofs,
-                  (int) inst->marks[inst->mkreadidx].data);
-        inst->mkreadidx++;
-        if (inst->mkreadidx >= MARKERBUFLEN)
-          inst->mkreadidx = 0;
+                  (long int) inst->marks[readidx].markofs,
+                  (int) inst->marks[readidx].data);
+        readidx++;
+        if (readidx >= MARKERBUFLEN)
+          readidx = 0;
       }
+      inst->mkreadidx = readidx;
 
       break;
+    }
 
     case STATUS_START_PENDING:
       // Open output file

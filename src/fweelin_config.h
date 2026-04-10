@@ -63,6 +63,25 @@
 // Interface ID assigned to first non-switchable interface
 #define NS_INTERFACE_START_ID 1000
 
+static_assert(SYNC_BEATS_PER_BAR > 0,
+              "SYNC_BEATS_PER_BAR must be positive");
+static_assert(MAX_PULSES > 0, "MAX_PULSES must be positive");
+static_assert(NUM_LOOP_SELECTION_SETS > 0,
+              "NUM_LOOP_SELECTION_SETS must be positive");
+static_assert(LAST_REC_COUNT > 0, "LAST_REC_COUNT must be positive");
+static_assert(FWEELIN_FILE_BROWSER_DIVISION_TIME > 0,
+              "Browser division time must be positive");
+static_assert(NS_INTERFACE_START_ID > 0,
+              "Non-switchable interface IDs must stay positive");
+static_assert(sizeof(FWEELIN_CONFIG_DIR) > 1,
+              "Config directory name must not be empty");
+static_assert(sizeof(FWEELIN_CONFIG_FILE) > 1,
+              "Config filename must not be empty");
+static_assert(sizeof(FWEELIN_CONFIG_EXT) > 1,
+              "Config file extension must not be empty");
+static_assert(sizeof(FWEELIN_OUTPUT_STREAM_NAME) > 1,
+              "Output stream name must not be empty");
+
 #ifdef __MACOSX__
 // On Linux, FWEELIN_DATADIR refers to /usr/local/share/fweelin as set by autoconf
 // On Mac, we store our data in the Resource directory of the fweelin.app bundle. 
@@ -483,6 +502,11 @@ enum FloDisplayType {
   FD_Snapshots,
   FD_ParamSet,
 };
+
+static_assert(FD_Unknown == 0,
+              "FloDisplayType assumes FD_Unknown is the zero value");
+static_assert(FD_ParamSet == FD_Snapshots + 1,
+              "FloDisplayType ordering changed unexpectedly");
 
 // List of variable displays used in video
 // There are different types of displays, this is a base class

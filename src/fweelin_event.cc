@@ -37,6 +37,7 @@
 
 #include <math.h>
 #include <string.h>
+#include <assert.h>
 
 #include <pthread.h>
 #include <sched.h>
@@ -142,6 +143,8 @@ EventTypeTable *Event::ett = 0;
     break; 
 
 void Event::SetupEventTypeTable(MemoryManager *mmgr) {
+  assert(mmgr != 0);
+  assert(ett == 0);
   int evnum = (int) EventType(T_EV_Last);
   ett = new EventTypeTable[evnum];
   for (int i = 0; i < evnum; i++) {
@@ -345,6 +348,7 @@ void Event::SetupEventTypeTable(MemoryManager *mmgr) {
 };
 
 void Event::TakedownEventTypeTable() {
+  assert(ett != 0);
   int evnum = (int) EventType(T_EV_Last);
   for (int i = 0; i < evnum; i++) {
     // Deleting the manager will delete all instances

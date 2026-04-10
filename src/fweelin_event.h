@@ -20,6 +20,7 @@
 
 #include <limits.h>
 #include <pthread.h>
+#include <cassert>
 
 #include "fweelin_sdlkey_compat.h"
 extern "C"
@@ -39,10 +40,13 @@ class Event;
 class ProcessorItem;
 
 class EventProducer {
+ public:
+  virtual ~EventProducer() = default;
 };
 
 class EventListener {
  public:
+  virtual ~EventListener() = default;
   
   virtual void ReceiveEvent(Event *ev, EventProducer *from) = 0;
 };
@@ -52,6 +56,7 @@ class EventListener {
 // and redirect them elsewhere, like typing text.
 class EventHook {
  public:
+  virtual ~EventHook() = default;
 
   // HookEvent works just like EventListener::ReceiveEvent,
   // except it returns nonzero if it has swallowed the event
@@ -72,6 +77,15 @@ double mygettime(void);
 #define MAX_MIDI_NOTES 127
 #define MAX_MIDI_PORTS 4
 #define MIDI_CC_SUSTAIN 64  // Sustain pedal cc
+
+static_assert(FWEELIN_OUTNAME_LEN > 0, "Filename buffer length must be positive");
+static_assert(MAX_MIDI_CHANNELS > 0, "MIDI channel count must be positive");
+static_assert(MAX_MIDI_CONTROLLERS > 0,
+              "MIDI controller count must be positive");
+static_assert(MAX_MIDI_NOTES > 0, "MIDI note count must be positive");
+static_assert(MAX_MIDI_PORTS > 0, "MIDI port count must be positive");
+static_assert(MIDI_CC_SUSTAIN >= 0 && MIDI_CC_SUSTAIN <= MAX_MIDI_CONTROLLERS,
+              "Sustain CC must stay within the controller range");
 
 // Get a new block of events of the given type
 #define EVT_NEW_BLOCK(typ,etyp) ::new typ[Event::GetMemMgrByType(etyp)-> \
@@ -231,6 +245,12 @@ enum EventType {
   T_EV_Last
 };
 
+static_assert(T_EV_None == 0, "EventType assumes T_EV_None is the zero value");
+static_assert(T_EV_Last_Bindable > T_EV_BrowserItemBrowsed,
+              "Bindable-event sentinel must follow the last bindable event");
+static_assert(T_EV_Last == T_EV_TransmitPlayingLoopsToDAW + 1,
+              "EventType sentinel must remain aligned with the last event");
+
 #include "fweelin_datatypes.h"
 #include "fweelin_block.h"
 
@@ -306,6 +326,8 @@ class Event : public Preallocated {
 
   // Get the memory manager for the given type
   static inline PreallocatedType *GetMemMgrByType(EventType typ) {
+    assert(ett != nullptr);
+    assert(typ >= T_EV_None && typ < T_EV_Last);
     return ett[(int) typ].pretype;
   };
   // Returns an instance of the event named 'evtname'
@@ -316,9 +338,17 @@ class Event : public Preallocated {
   static Event *GetEventByType(EventType typ, char wait = 0);
   // Returns the index of the indexed parameter for the event with given
   // type
-  static int GetParamIdxByType(EventType typ) { return ett[typ].paramidx; };
+  static int GetParamIdxByType(EventType typ) {
+    assert(ett != nullptr);
+    assert(typ >= T_EV_None && typ < T_EV_Last);
+    return ett[typ].paramidx;
+  };
   // Returns the string name of the given event type
-  static const char *GetEventName(EventType typ) { return ett[typ].name; };
+  static const char *GetEventName(EventType typ) {
+    assert(ett != nullptr);
+    assert(typ >= T_EV_None && typ < T_EV_Last);
+    return ett[typ].name;
+  };
 
   static EventTypeTable *ett;
   static void SetupEventTypeTable(MemoryManager *mmgr);

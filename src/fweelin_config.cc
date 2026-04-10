@@ -34,6 +34,7 @@
 #include <sys/time.h>
 
 #include <stdio.h>
+#include <assert.h>
 
 #include <errno.h>
 #include <unistd.h>
@@ -66,15 +67,29 @@ char *FWEELIN_DATADIR = FWEELIN_datadir;
 
 const char CfgMathOperation::operators[] = {'/', '*', '+', '-'};
 const int CfgMathOperation::numops = 4;
+static_assert(CfgMathOperation::numops ==
+                  static_cast<int>(sizeof(CfgMathOperation::operators)),
+              "CfgMathOperation::numops must match operators table size");
 
 const int FloConfig::NUM_PREALLOCATED_AUDIO_BLOCKS = 40;
 const int FloConfig::NUM_PREALLOCATED_TIME_MARKERS = 40;
 const float FloConfig::AUDIO_MEMORY_LEN = 10.0;
 const int FloConfig::CFG_PATH_MAX = 2048;
 
+static_assert(FloConfig::NUM_PREALLOCATED_AUDIO_BLOCKS > 0,
+              "Audio block preallocation count must be positive");
+static_assert(FloConfig::NUM_PREALLOCATED_TIME_MARKERS > 0,
+              "Time marker preallocation count must be positive");
+static_assert(FloConfig::CFG_PATH_MAX > 0,
+              "Config path buffer size must be positive");
+
 namespace {
 static void BuildConfigPath(char *dst, size_t dst_size, const char *dir,
                             const char *name) {
+  assert(dst != nullptr);
+  assert(dst_size > 0);
+  assert(dir != nullptr);
+  assert(name != nullptr);
   snprintf(dst, dst_size, "%s/%s", dir, name);
 }
 
@@ -1573,6 +1588,7 @@ EventBinding *InputMatrix::MatchBinding(Event *ev, EventBinding *start) {
 };
 
 void InputMatrix::ReceiveEvent(Event *ev, EventProducer *from) {
+  assert(ev != nullptr);
   char echo = 1;
   EventBinding *match = 0;
 

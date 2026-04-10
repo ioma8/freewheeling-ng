@@ -44,6 +44,11 @@ typedef enum {
   END_OF_FORMATS = 4
 } codec;
 
+static_assert(FIRST_FORMAT == VORBIS,
+              "codec range must start at the Vorbis format");
+static_assert(END_OF_FORMATS == AU + 1,
+              "codec sentinel must remain aligned with the last codec");
+
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -66,6 +71,11 @@ enum BlockExtendedDataType {
   T_BED_PeaksAvgs,
   T_BED_MarkerPoints
 };
+
+static_assert(T_BED_None == 0,
+              "BlockExtendedDataType assumes T_BED_None is the zero value");
+static_assert(T_BED_MarkerPoints == T_BED_PeaksAvgs + 1,
+              "BlockExtendedDataType ordering changed unexpectedly");
 
 class BlockExtendedData {
  public:
