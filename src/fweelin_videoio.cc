@@ -69,7 +69,7 @@ static SDL_Window *CreateVideoWindow(int width, int height, char fullscreen) {
 
 double mygettime(void) {
   static struct timeval mytv;
-  gettimeofday(&mytv,NULL);
+  gettimeofday(&mytv,nullptr);
   return(mytv.tv_sec+mytv.tv_usec/1000000.0);
 }
 
@@ -859,7 +859,7 @@ int VideoIO::draw_text(SDL_Surface *out, TTF_Font *font,
   SDL_Color black = { 0, 0, 0, 0 };
 
   text = TTF_RenderText_Shaded(font, str, clr, black);
-  if ( text != NULL ) {
+  if ( text != nullptr ) {
     dstrect.x = x;
     dstrect.y = y;
     dstrect.w = text->w;
@@ -876,7 +876,7 @@ int VideoIO::draw_text(SDL_Surface *out, TTF_Font *font,
       dstrect.y -= (justifyy == 1 ? dstrect.h/2 : dstrect.h);
 
     SDL_SetColorKey(text, SDL_TRUE, 0);
-    SDL_BlitSurface(text, NULL, out, &dstrect);
+    SDL_BlitSurface(text, nullptr, out, &dstrect);
     SDL_FreeSurface(text);
   }
   else {
@@ -960,7 +960,7 @@ char VideoIO::DrawLoop(LoopManager *loopmgr, int i,
     loopdvol = 1.0; // Loop volume delta
   if (pa != 0) {
     // Background
-    SDL_FillRect(lscopepic,NULL,
+  SDL_FillRect(lscopepic,nullptr,
                  SDL_MapRGB(lscopepic->format,
                             (int) (loopcolors[0].r*colormag),
                             (int) (loopcolors[0].g*colormag),
@@ -1625,7 +1625,7 @@ void VideoIO::video_event_loop ()
     float lvol = app->getMASTERLIMITER()->GetLimiterVolume();
 
     // Clear screen
-    SDL_FillRect(screen,NULL,0);
+  SDL_FillRect(screen,nullptr,0);
 
     // Draw layouts
 #if 1
@@ -2006,14 +2006,14 @@ void VideoIO::video_event_loop ()
         dst.y = (int) (-logopic->h + screen->h*titlepct);
         dst.w = logopic->w;
         dst.h = logopic->h;
-        SDL_BlitSurface(logopic, NULL, screen, &dst);   
+    SDL_BlitSurface(logopic, nullptr, screen, &dst);
       } else if (titlepct > t_floatin && titlepct < t_floatin+1.0) {
         SDL_Rect dst;
         dst.x = screen->w-logopic->w;
         dst.y = screen->h-logopic->h;
         dst.w = logopic->w;
         dst.h = logopic->h;
-        SDL_BlitSurface(logopic, NULL, screen, &dst);
+    SDL_BlitSurface(logopic, nullptr, screen, &dst);
         int ver_x, ver_y;
         TTF_SizeText(mainfont,VERSION,&ver_x,&ver_y);
         draw_text(screen,mainfont,VERSION,
@@ -2025,7 +2025,7 @@ void VideoIO::video_event_loop ()
         dst.y = screen->h-logopic->h;
         dst.w = logopic->w;
         dst.h = logopic->h;
-        SDL_BlitSurface(logopic, NULL, screen, &dst);
+    SDL_BlitSurface(logopic, nullptr, screen, &dst);
         int ver_x, ver_y;
         TTF_SizeText(mainfont,VERSION,&ver_x,&ver_y);
         draw_text(screen,mainfont,VERSION,
@@ -2037,7 +2037,7 @@ void VideoIO::video_event_loop ()
         dst.y = screen->h-logopic->h;
         dst.w = logopic->w;
         dst.h = logopic->h;
-        SDL_BlitSurface(logopic, NULL, screen, &dst);
+    SDL_BlitSurface(logopic, nullptr, screen, &dst);
         int ver_x, ver_y;
         TTF_SizeText(mainfont,VERSION,&ver_x,&ver_y);
         draw_text(screen,mainfont,VERSION,
@@ -2049,7 +2049,7 @@ void VideoIO::video_event_loop ()
         dst.y = screen->h-logopic->h;
         dst.w = logopic->w;
         dst.h = logopic->h;
-        SDL_BlitSurface(logopic, NULL, screen, &dst);
+    SDL_BlitSurface(logopic, nullptr, screen, &dst);
       }
     }
 #endif

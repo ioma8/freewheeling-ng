@@ -126,7 +126,7 @@ void FloConfig::CopyConfigFile (const char *cfgname, char copyall) {
     glob_t globbuf;
     snprintf(buf,CFG_PATH_MAX,"%s/*%s",FWEELIN_DATADIR,FWEELIN_CONFIG_EXT);
     printf("INIT: Copying all config files from shared folder...\n");
-    if (glob(buf, 0, NULL, &globbuf) == 0) {
+  if (glob(buf, 0, nullptr, &globbuf) == 0) {
       for (size_t i = 0; i < globbuf.gl_pathc; i++) {
         // Strip path and send filename
         char *lastslash = strrchr(globbuf.gl_pathv[i],'/');

@@ -103,10 +103,10 @@ class VideoIO : public EventProducer, public EventListener {
   friend class Fweelin;
 
 public:
-  VideoIO (Fweelin *app) : app(app), screen(0), window(0), cmaps(0),
+  VideoIO (Fweelin *app) : app(app), screen(nullptr), window(nullptr), cmaps(nullptr),
     showlooprange(0,0), showhelppage(0), cur_iid(0), videothreadgo(0) {};
 
-  virtual ~VideoIO() {};
+  ~VideoIO() override = default;
 
   int activate ();
   void close ();
@@ -118,12 +118,12 @@ public:
   void SetVideoMode(char fullscreen);
   char GetVideoMode() { return fullscreen; };
 
-  void ReceiveEvent(Event *ev, EventProducer */*from*/);
+  void ReceiveEvent(Event *ev, EventProducer */*from*/) override;
 
   // Draw text, and optionally return size of text drawn in sx and sy
   static int draw_text(SDL_Surface *out, TTF_Font *font,
                        const char *str, int x, int y, SDL_Color clr, char centerx = 0,
-                       char centery = 0, int *sx = 0, int *sy = 0);
+                       char centery = 0, int *sx = nullptr, int *sy = nullptr);
 
   // If no suitable map exists in list 'cmaps', creates a planar>circular map
   // of diameter 'sz', mapping from the given surface. 

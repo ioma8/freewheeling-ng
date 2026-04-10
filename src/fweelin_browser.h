@@ -52,17 +52,17 @@ enum BrowserItemType {
 class BrowserItem {
  public:
   // Initialize a browser item with name n
-  BrowserItem(const char *n = 0, char default_name = 1) :
-    default_name(default_name), next(0), prev(0) {
-    if (n == 0)
-      name = 0;
+  BrowserItem(const char *n = nullptr, char default_name = 1) :
+    default_name(default_name), name(nullptr), next(nullptr), prev(nullptr) {
+    if (n == nullptr)
+      name = nullptr;
     else {
       name = new char[strlen(n)+1];
       strcpy(name,n);
     }
   };
   virtual ~BrowserItem() {
-    if (name != 0)
+    if (name != nullptr)
       delete[] name;
   };
 
@@ -85,12 +85,12 @@ class BrowserItem {
 
 class BrowserDivision : public BrowserItem {
  public:
-
-  virtual BrowserItemType GetType() { return B_Division; };
+  BrowserItemType GetType() override { return B_Division; };
 };
 
 class BrowserCallback {
  public:
+  virtual ~BrowserCallback() = default;
   virtual void ItemBrowsed(BrowserItem *i) = 0;
   virtual void ItemSelected(BrowserItem *i) = 0;
   virtual void ItemRenamed(BrowserItem *i) = 0;
@@ -98,6 +98,7 @@ class BrowserCallback {
 
 class RenameCallback {
  public:
+  virtual ~RenameCallback() = default;
   virtual void ItemRenamed(char *nw) = 0;
 };
 
@@ -112,15 +113,15 @@ class RenameUIVars {
 // This class encapsulates the UI for renaming an item 
 class ItemRenamer : public EventHook {
  public:
-  const static int RENAME_BUF_SIZE = 512; // Maximum length of item name
-  const static double BLINK_DELAY;
+  static constexpr int RENAME_BUF_SIZE = 512; // Maximum length of item name
+  static constexpr double BLINK_DELAY = 0.5;
 
   ItemRenamer(Fweelin *app, RenameCallback *cb, char *oldname);
 
-  virtual ~ItemRenamer() {};
+  ~ItemRenamer() override = default;
 
   // Hook events for typing new names
-  virtual char HookEvent(Event *ev, EventProducer */*from*/);
+  char HookEvent(Event *ev, EventProducer */*from*/) override;
 
   inline const char *GetCurName() { return rename_tmpbuf; };
   inline RenameUIVars *UpdateUIVars() { 
@@ -167,7 +168,7 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
            BrowserItemType btype, char xpand, int xpand_x1, int xpand_y1,
            int xpand_x2, int xpand_y2, float xpand_delay) : 
     FloDisplay(iid),
-    renamer(0), app(0), btype(btype), callback(0), first(0), cur(0),
+    renamer(nullptr), app(nullptr), btype(btype), callback(nullptr), first(nullptr), cur(nullptr),
     xpand_x1(xpand_x1), xpand_y1(xpand_y1), 
     xpand_x2(xpand_x2), xpand_y2(xpand_y2), xpand_centery(-1), 
     xpand_liney(-1), xpand_spread(-1), xpand_lastactivity(0.0), 
@@ -179,7 +180,7 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
       btype = (BrowserItemType) 0;
     }
   };
-  virtual ~Browser();
+  ~Browser() override;
   
   // Call after construction when we have app & callback ready
   virtual void Setup(Fweelin *a, BrowserCallback *c);
@@ -213,16 +214,16 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
                       char *outbuf, int maxlen);
 
   ItemRenamer *renamer; // Renamer instance, or null if we are not renaming
-  virtual void ItemRenamed(char *nw); // Callback for renamer
+  void ItemRenamed(char *nw) override; // Callback for renamer
   
   // Via this method, a browser is notified of a change to the on-disk name
   // of an item. For example, when a Loop in memory is renamed, we also
   // rename it on disk, and the loop browser must be notified of this new name.
-  void ItemRenamedOnDisk(char *old_filename, char *new_filename, 
-                         char *new_name);
+  void ItemRenamedOnDisk(const char *old_filename, const char *new_filename,
+                         const char *new_name);
 
   inline BrowserItemType GetType() { return btype; };
-  virtual FloDisplayType GetFloDisplayType() { return FD_Browser; };
+  FloDisplayType GetFloDisplayType() override { return FD_Browser; };
 
   inline static const char *GetTypeName(BrowserItemType b) {
     switch (b) {
@@ -250,10 +251,10 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
   };
 
   // Receive events
-  virtual void ReceiveEvent(Event *ev, EventProducer */*from*/);
+  void ReceiveEvent(Event *ev, EventProducer */*from*/) override;
 
   // Draw to screen
-  virtual void Draw(SDL_Surface *screen);
+  void Draw(SDL_Surface *screen) override;
   virtual void Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y);
 
   virtual void ClearAllItems();
@@ -278,15 +279,15 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
   inline BrowserItem *GetCurItem() { return cur; };
 
   // Threadsafe item rename 
-  inline void RenameItem(BrowserItem *i, char *nw) {
+  inline void RenameItem(BrowserItem *i, const char *nw) {
     LockBrowser();
-    if (i->name != 0) 
+    if (i->name != nullptr)
       delete[] i->name;
-    if (nw != 0) {
+    if (nw != nullptr) {
       i->name = new char[strlen(nw)+1];
       strcpy(i->name,nw);
     } else
-      i->name = 0;
+      i->name = nullptr;
     UnlockBrowser();
   };
   
@@ -335,25 +336,25 @@ class LoopTray : public Browser {
     Browser(iid,btype,xpand,xpand_x1,xpand_y1,xpand_x2,xpand_y2,0.0),
     loopsize(loopsize), basepos(0), iconsize(0), 
     resize_win(RS_Off), touchtray(0), loopmap(0) {};
-  virtual ~LoopTray();
+  ~LoopTray() override;
 
   // Call after construction when we have app & callback ready
-  virtual void Setup(Fweelin *a, BrowserCallback *c);
+  void Setup(Fweelin *a, BrowserCallback *c) override;
 
   // Draw to screen
-  virtual void Draw(SDL_Surface *screen);
-  virtual void Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y);
+  void Draw(SDL_Surface *screen) override;
+  void Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) override;
 
   // Receive events
-  virtual void ReceiveEvent(Event *ev, EventProducer *from);
+  void ReceiveEvent(Event *ev, EventProducer *from) override;
 
   // Mouse updates
-  virtual char MouseButton(MouseButtonInputEvent *mev);
-  virtual char MouseMotion(MouseMotionInputEvent *mev);
+  char MouseButton(MouseButtonInputEvent *mev) override;
+  char MouseMotion(MouseMotionInputEvent *mev) override;
 
   // Renaming
   void Rename(int loopid);
-  virtual void ItemRenamed(char *nw);
+  void ItemRenamed(char *nw) override;
   void ItemRenamedFromOutside(Loop *l, char *nw);
 
   int loopsize,   // Size of loops in tray

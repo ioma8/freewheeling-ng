@@ -121,7 +121,7 @@ static SDLKey TranslateSDLKeycode(SDL_Keycode keycode) {
 
 static int DecodeTextInputUnicode(const char *text) {
   const unsigned char *ptr = reinterpret_cast<const unsigned char *>(text);
-  if (ptr == 0 || ptr[0] == '\0')
+  if (ptr == nullptr || ptr[0] == '\0')
     return 0;
   if (ptr[0] < 0x80)
     return ptr[0];
@@ -460,7 +460,7 @@ static const char *SDL_names[] = {
   "euro", 
   "undo"};
 
-SDLKey SDLIO::GetSDLKey(char *keyname) {
+SDLKey SDLIO::GetSDLKey(const char *keyname) {
   SDLKey ky;
   for (ky = FWL_SDLK_FIRST; ky < FWL_SDLK_LAST; ky = (SDLKey)(ky+1)) {
     /*char *nm = SDL_GetKeyName(ky);

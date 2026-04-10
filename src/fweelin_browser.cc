@@ -33,8 +33,6 @@
 #include "fweelin_fluidsynth.h"
 #include "fweelin_browser.h"
 
-const double ItemRenamer::BLINK_DELAY = 0.5;
-
 ItemRenamer::ItemRenamer (Fweelin *app, RenameCallback *cb, 
                           char *oldname) : app(app), cb(cb) {
   if (oldname == 0)
@@ -221,16 +219,16 @@ void Browser::ItemRenamed(char *nw) {
 // Via this method, a browser is notified of a change to the on-disk name
 // of an item. For example, when a Loop in memory is renamed, we also
 // rename it on disk, and the loop browser must be notified of this new name.
-void Browser::ItemRenamedOnDisk(char *old_filename, char *new_filename,
-                                char *new_name) {
-  if (old_filename == 0 ||
-      new_filename == 0)
+void Browser::ItemRenamedOnDisk(const char *old_filename, const char *new_filename,
+                                const char *new_name) {
+  if (old_filename == nullptr ||
+      new_filename == nullptr)
     return;
 
   BrowserItem *cur = first;
   char found = 0;
-  while (cur != 0 && !found) {
-    char *filename = 0;
+  while (cur != nullptr && !found) {
+    const char *filename = nullptr;
     if (cur->GetType() == B_Loop) 
       filename = ((LoopBrowserItem *) cur)->filename;
     else if (cur->GetType() == B_Scene)
@@ -238,7 +236,7 @@ void Browser::ItemRenamedOnDisk(char *old_filename, char *new_filename,
 
     // printf("looking for oldfilename: %s .. cur: %s\n",
     //   old_filename, filename);
-    if (filename != 0 && !strcmp(filename,old_filename))
+    if (filename != nullptr && !strcmp(filename,old_filename))
       found = 1;
     else
       cur = cur->next;
@@ -248,7 +246,7 @@ void Browser::ItemRenamedOnDisk(char *old_filename, char *new_filename,
     // Found this item in our browser-- rename in our browser
 
     // Assign new filename
-    char *filename = 0;
+    char *filename = nullptr;
     if (cur->GetType() == B_Loop) 
       filename = ((LoopBrowserItem *) cur)->filename;
     else if (cur->GetType() == B_Scene)

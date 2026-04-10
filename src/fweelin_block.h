@@ -149,8 +149,8 @@ class BED_MarkerPoints : public BlockExtendedData {
 class AudioBlock : public Preallocated {
 public:
   // Default length of new audio blocks (samples)
-  static const nframes_t AUDIOBLOCK_DEFAULT_LEN = 20000,
-    AUDIOBLOCK_SMOOTH_ENDPOINTS_LEN = 64;
+  static constexpr nframes_t AUDIOBLOCK_DEFAULT_LEN = 20000;
+  static constexpr nframes_t AUDIOBLOCK_SMOOTH_ENDPOINTS_LEN = 64;
 
   // Create a new audioblock as the beginning of a block list
   AudioBlock(nframes_t len = AUDIOBLOCK_DEFAULT_LEN);

@@ -18,6 +18,7 @@
    You should have received a copy of the GNU General Public License
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
+#include <array>
 #include <pthread.h>
 
 #include "fweelin_sdlkey_compat.h"
@@ -50,7 +51,7 @@ class KeySettings {
 
 class SDLKeyList {
  public:
-  SDLKeyList (SDLKey k) : k(k), next(0) {};
+  SDLKeyList (SDLKey k) : k(k), next(nullptr) {};
 
   SDLKey k;
   SDLKeyList *next;
@@ -59,28 +60,23 @@ class SDLKeyList {
 // SDL Input Handler
 class SDLIO : public EventProducer, public EventListener {
 public:
-  SDLIO (Fweelin *app) : app(app), sdlthreadgo(0) {
-    keyheld = new char[FWL_SDLK_LAST];
-    for (int i = 0; i < FWL_SDLK_LAST; i++)
-      keyheld[i] = 0;
-  };
-  virtual ~SDLIO() { 
-    delete[] keyheld;
-  };
+  SDLIO (Fweelin *app) : app(app), numjoy(0), joys(nullptr), keyheld{},
+                         sdl_thread(), sdlthreadgo(0) {};
+  ~SDLIO() override = default;
 
   int activate ();
   void close ();
 
   char IsActive () { return sdlthreadgo; };
-  char *GetKeysHeld () { return keyheld; };
+  char *GetKeysHeld () { return keyheld.data(); };
 
   KeySettings *getSETS() { return &sets; };
 
-  void ReceiveEvent(Event *ev, EventProducer */*from*/);
+  void ReceiveEvent(Event *ev, EventProducer */*from*/) override;
 
   // We use slightly modified keynames for the config system:
   // Gets the SDL keysym that corresponds to key with a given name
-  static SDLKey GetSDLKey(char *keyname);
+  static SDLKey GetSDLKey(const char *keyname);
   // And the name corresponding to the keysym..
   static const char *GetSDLName(SDLKey sym);
 
@@ -108,7 +104,7 @@ protected:
   SDL_Joystick **joys;  // Control structure for each joystick
 
   // Keys currently held down- array for all SDLKeys, nonzero if held
-  char *keyheld;
+  std::array<char, FWL_SDLK_LAST> keyheld;
 
   // Deprecated
   KeySettings sets;

@@ -39,7 +39,7 @@ public:
 class LibraryHelper {
 public:
   // Returns the stub (base of filename) for a given loop in memory
-  static const std::string GetStubnameFromLoop (Fweelin *app, Loop *l) {
+  [[nodiscard]] static std::string GetStubnameFromLoop(Fweelin *app, Loop *l) {
     std::ostringstream tmp;
     GET_SAVEABLE_HASH_TEXT(l->GetSaveHash());
     tmp << app->getCFG()->GetLibraryPath() << "/" << FWEELIN_OUTPUT_LOOP_NAME << "-" <<
@@ -49,9 +49,9 @@ public:
   };
 
   // Returns, for example, fw-lib/live24. Does not return the file extension.
-  static const std::string GetNextAvailableStreamOutFilename (Fweelin *app, int &stream_num, std::string &display_name) {
+  [[nodiscard]] static std::string GetNextAvailableStreamOutFilename(Fweelin *app, int &stream_num, std::string &display_name) {
     // Create appropriate filename for output
-    char go = 1;
+    bool go = true;
 
     do {
       // Scan for already existing output streams, using the timing file as a check
@@ -70,7 +70,7 @@ public:
         // No file with this name. Name is free.
 
         // Prepare base name with and without path
-        go = 0;
+        go = false;
         std::ostringstream tmp2;
         tmp2 << app->getCFG()->GetLibraryPath() << "/" << FWEELIN_OUTPUT_STREAM_NAME << stream_num;
         const std::string s2 = tmp2.str();
@@ -113,7 +113,7 @@ public:
       const std::string s = tmp.str();
 
       glob_t globbuf;
-      if (glob(s.c_str(), 0, NULL, &globbuf) == 0) {
+      if (glob(s.c_str(), 0, nullptr, &globbuf) == 0) {
         for (size_t j = 0; j < globbuf.gl_pathc; j++) {
           if (stat(globbuf.gl_pathv[j],&st) == 0) {
             // Found it
