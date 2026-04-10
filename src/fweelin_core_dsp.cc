@@ -36,6 +36,7 @@
 
 #include "fweelin_config.h"
 #include "fweelin_core_dsp.h"
+#include "fweelin_dsp_profile.h"
 
 const float Processor::MIN_VOL = 0.01;
 const nframes_t Processor:: DEFAULT_SMOOTH_LENGTH = 64;
@@ -1029,6 +1030,10 @@ void RecordProcessor::Jump(nframes_t ofs) {
 };
 
 void RecordProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
+  uint64_t profile_start_ticks = 0;
+  if (!pre && DspProfile::Enabled())
+    profile_start_ticks = DspProfile::NowTicks();
+
   nframes_t fragmentsize = app->getBUFSZ();
   if (len > fragmentsize)
     len = fragmentsize;
@@ -1101,7 +1106,13 @@ void RecordProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
           tmpi->GetFragment(&lpbuf[0],0);
         
         // Mix selected inputs
+        uint64_t mix_start_ticks = 0;
+        if (DspProfile::Enabled())
+          mix_start_ticks = DspProfile::NowTicks();
         ab->MixInputs(len,mbuf,iset,*inputvol,compute_stats);
+        if (mix_start_ticks != 0)
+          DspProfile::RecordRecordInputMix(
+              DspProfile::NowTicks() - mix_start_ticks, len);
         
         FadeOut_Input(len, mbuf[0], mbuf[1],
                       lpbuf[0], lpbuf[1], 
@@ -1165,7 +1176,13 @@ void RecordProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
     // ** Record part
     if (!pre && !od_stop) {
       // Mix selected inputs to record loop
+      uint64_t mix_start_ticks = 0;
+      if (DspProfile::Enabled())
+        mix_start_ticks = DspProfile::NowTicks();
       ab->MixInputs(len,mbuf,iset,*inputvol,compute_stats);
+      if (mix_start_ticks != 0)
+        DspProfile::RecordRecordInputMix(
+            DspProfile::NowTicks() - mix_start_ticks, len);
       
       if (od_loop != 0) {
         // Overdub- mix new input with loop
@@ -1180,6 +1197,9 @@ void RecordProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
         // od_lastofs = i->GetTotalLength2Cur();
                 
         if (!od_fadeout && !od_fadein) {
+          uint64_t overdub_mix_start_ticks = 0;
+          if (DspProfile::Enabled())
+            overdub_mix_start_ticks = DspProfile::NowTicks();
           // Regular case mix
           if (stereo) {
             sample_t *m_l = mbuf[0],
@@ -1210,7 +1230,13 @@ void RecordProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
                 *m_l += *lpb_l * old_fb;
             }
           }
+          if (overdub_mix_start_ticks != 0)
+            DspProfile::RecordRecordOverdubMix(
+                DspProfile::NowTicks() - overdub_mix_start_ticks, len);
         } else if (od_fadein) {
+          uint64_t overdub_mix_start_ticks = 0;
+          if (DspProfile::Enabled())
+            overdub_mix_start_ticks = DspProfile::NowTicks();
           // Fade in input samples
           FadeIn_Input(len, mbuf[0], mbuf[1],
                        lpbuf[0], lpbuf[1], 
@@ -1219,20 +1245,35 @@ void RecordProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
 
           // Proceed as regular overdub
           od_fadein = 0;
+          if (overdub_mix_start_ticks != 0)
+            DspProfile::RecordRecordOverdubMix(
+                DspProfile::NowTicks() - overdub_mix_start_ticks, len);
         } else if (od_fadeout) {
+          uint64_t overdub_mix_start_ticks = 0;
+          if (DspProfile::Enabled())
+            overdub_mix_start_ticks = DspProfile::NowTicks();
           // Fade out input samples
           FadeOut_Input(len, mbuf[0], mbuf[1],
                         lpbuf[0], lpbuf[1], 
                         old_fb, new_fb, fb_delta,
                         mbuf[0], mbuf[1]);
+          if (overdub_mix_start_ticks != 0)
+            DspProfile::RecordRecordOverdubMix(
+                DspProfile::NowTicks() - overdub_mix_start_ticks, len);
         }
       }
       
       // Record
+      uint64_t write_start_ticks = 0;
+      if (DspProfile::Enabled())
+        write_start_ticks = DspProfile::NowTicks();
       if (stereo) 
         i->PutFragment(mbuf[0],mbuf[1]);
       else
         i->PutFragment(mbuf[0],0);
+      if (write_start_ticks != 0)
+        DspProfile::RecordRecordWrite(
+            DspProfile::NowTicks() - write_start_ticks, len);
 
       if (!pre) {
         if (od_fadeout) {
@@ -1252,6 +1293,10 @@ void RecordProcessor::process(char pre, nframes_t len, AudioBuffers *ab) {
     if (out[1] != 0)
       memset(out[1],0,sizeof(sample_t) * len);
   }
+
+  if (profile_start_ticks != 0)
+    DspProfile::RecordRecordProcess(
+        DspProfile::NowTicks() - profile_start_ticks, len);
 }
 
 PlayProcessor::PlayProcessor(Fweelin *app, Loop *playloop, float playvol,

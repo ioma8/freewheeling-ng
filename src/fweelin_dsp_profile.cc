@@ -46,6 +46,10 @@ struct ProfileState {
   ProfileCounter audio_callback;
   ProfileCounter root_process;
   ProfileCounter pulse_process;
+  ProfileCounter record_process;
+  ProfileCounter record_input_mix;
+  ProfileCounter record_overdub_mix;
+  ProfileCounter record_write;
   ProfileCounter processchain[kProcessChainTypes];
 #ifdef __MACOSX__
   mach_timebase_info_data_t timebase;
@@ -60,6 +64,10 @@ ProfileState &state() {
       0,
       {0},
       0,
+      {0, 0, 0, 0},
+      {0, 0, 0, 0},
+      {0, 0, 0, 0},
+      {0, 0, 0, 0},
       {0, 0, 0, 0},
       {0, 0, 0, 0},
       {0, 0, 0, 0},
@@ -212,6 +220,22 @@ void RecordPulseProcess(uint64_t elapsed_ticks, uint64_t frames) {
   record(state().pulse_process, elapsed_ticks, frames);
 }
 
+void RecordRecordProcess(uint64_t elapsed_ticks, uint64_t frames) {
+  record(state().record_process, elapsed_ticks, frames);
+}
+
+void RecordRecordInputMix(uint64_t elapsed_ticks, uint64_t frames) {
+  record(state().record_input_mix, elapsed_ticks, frames);
+}
+
+void RecordRecordOverdubMix(uint64_t elapsed_ticks, uint64_t frames) {
+  record(state().record_overdub_mix, elapsed_ticks, frames);
+}
+
+void RecordRecordWrite(uint64_t elapsed_ticks, uint64_t frames) {
+  record(state().record_write, elapsed_ticks, frames);
+}
+
 void PrintReport(FILE *out) {
   ProfileState &profile_state = state();
   if (!profile_state.enabled)
@@ -220,6 +244,10 @@ void PrintReport(FILE *out) {
   print_counter(out, "audio_callback", profile_state.audio_callback);
   print_counter(out, "root_process", profile_state.root_process);
   print_counter(out, "pulse_process", profile_state.pulse_process);
+  print_counter(out, "record_process", profile_state.record_process);
+  print_counter(out, "record_input_mix", profile_state.record_input_mix);
+  print_counter(out, "record_overdub_mix", profile_state.record_overdub_mix);
+  print_counter(out, "record_write", profile_state.record_write);
   for (int i = 0; i < kProcessChainTypes; i++)
     print_counter(out, processchain_name(i), profile_state.processchain[i]);
 }
