@@ -494,8 +494,24 @@ void LoopManager::SelectPulse (int pulseindex) {
     printf("CORE: Invalid pulse #%d, ignoring.\n",pulseindex);
     return;
   } else if (pulses[pulseindex] == 0) {
-    //printf("New pulse[%d]: %d SUB: %d\n", pulseindex, lastindex, subdivide);
-    CreatePulse(lastindex, pulseindex, subdivide);
+    int sourceindex = -1;
+    for (int i = 0; i < LAST_REC_COUNT; i++) {
+      int candidate = lastrecidx[i];
+      if (candidate >= 0 &&
+          candidate < app->getCFG()->GetNumTriggers() &&
+          app->getTMAP()->GetMap(candidate) != 0) {
+        sourceindex = candidate;
+        break;
+      }
+    }
+
+    if (sourceindex == -1) {
+      printf("CORE: No recorded loop available to define pulse #%d.\n",
+             pulseindex);
+      return;
+    }
+
+    CreatePulse(sourceindex, pulseindex, subdivide);
   } else {
     //printf("Select pulse[%d]\n", pulseindex);
     curpulseindex = pulseindex;
@@ -827,7 +843,7 @@ void LoopManager::TapPulse(int pulseindex, char newlen) {
     // Tolerance for rejecting tap tempo changes- as fraction of current length
     TAP_NEWLEN_REJECT_TOLERANCE = 1.0; //0.3;
 
-  if (pulseindex >= 0 || pulseindex < MAX_PULSES) {
+  if (pulseindex >= 0 && pulseindex < MAX_PULSES) {
     Pulse *cur = pulses[pulseindex];
     if (cur == 0) {
       if (newlen) {
@@ -889,7 +905,7 @@ void LoopManager::TapPulse(int pulseindex, char newlen) {
 }
 
 void LoopManager::SwitchMetronome(int pulseindex, char active) {
-  if (pulseindex >= 0 || pulseindex < MAX_PULSES) {
+  if (pulseindex >= 0 && pulseindex < MAX_PULSES) {
     Pulse *cur = pulses[pulseindex];
     if (cur != 0)
       cur->SwitchMetronome(active);
