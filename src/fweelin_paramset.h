@@ -131,8 +131,8 @@ public:
   };
 
   virtual FloDisplayType GetFloDisplayType() { return FD_ParamSet; };
-
-  virtual void Draw(SDL_Surface *screen);
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics);
   
   virtual void ReceiveEvent(Event *ev, EventProducer */*from*/);
 

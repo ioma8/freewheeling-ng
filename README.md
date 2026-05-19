@@ -20,6 +20,8 @@ Apple Silicon and builds as a native `arm64` application.
 The macOS path in this fork uses the native CoreAudio stack together with
 SDL and the original Freewheeling codebase.
 
+For a brief map of the repository structure, see `OVERVIEW.md`.
+
 ### Fork Changes
 
 This fork is focused on making the project usable again on current macOS

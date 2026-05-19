@@ -55,6 +55,7 @@
 #include "fweelin_core.h"
 #include "fweelin_core_dsp.h"
 #include "fweelin_paramset.h"
+#include "fweelin_string_utils.h"
 
 // *********** CONFIG
 
@@ -603,7 +604,6 @@ SDLKeyList *InputMatrix::AddOneKey (SDLKeyList *first, char *str) {
 // Extracts named keys from the given string and returns a list
 // of the keysyms (named keys are separated by ,)
 SDLKeyList *InputMatrix::ExtractKeys (char *str) {
-  char buf[255]; // Copy buf
   const char *delim = ",";
 
   // Go through list of keys specified:
@@ -615,39 +615,27 @@ SDLKeyList *InputMatrix::ExtractKeys (char *str) {
     firstopidx = -1;
   
   // First key
-  if (firstopidx == -1) {
-    strncpy(buf,str,255);
-    buf[254] = '\0';
-  }
-  else {
-    long len = MIN(firstopidx,254);
-    memcpy(buf,str,len);
-    buf[len] = '\0';
-  }
+  FweelinTokenSpan span;
+  if (firstopidx == -1)
+    span = fweelin_split_token(str, '\0');
+  else
+    span = fweelin_split_token(str, *delim);
 
   // Parse it
   SDLKeyList *first = 0;
-  first = AddOneKey(first,buf);
+  char *token = fweelin_dup_token(span);
+  first = AddOneKey(first,token);
+  delete[] token;
 
   while (cur != 0) {
-    cur++;
-    char *next = strpbrk(cur,delim);
-
-    // Copy the key name
-    long len;
-    if (next != 0)
-      len = (long)next-(long)cur;
-    else
-      len = strlen(cur);
-    if (len >= 255)
-      len = 254;
-    memcpy(buf,cur,len);
-    buf[len] = '\0';
+    span = fweelin_split_token(cur + 1, *delim);
 
     // And parse it
-    first = AddOneKey(first,buf);
+    token = fweelin_dup_token(span);
+    first = AddOneKey(first,token);
+    delete[] token;
 
-    cur = next;
+    cur = const_cast<char *>(span.next);
   }
 
   return first;
@@ -671,19 +659,18 @@ void InputMatrix::SetVariable (UserVariable *var, const char *value) {
     break;
   case T_range :
     {
-      char tmp[255];
-      strncpy(tmp,value,255);
-      tmp[254] = '\0';
-      char *delim = strchr(tmp,'>');
-      if (delim != 0) {
-        *delim = '\0';
-        delim++;
-      }
+      FweelinTokenSpan lo_span = fweelin_split_token(value, '>');
+      char *lo_token = fweelin_dup_token(lo_span);
+      char *hi_token = (lo_span.next != 0 ? fweelin_dup_token(
+                          fweelin_split_token(lo_span.next, '\0')) : 0);
 
-      int lo = atoi(tmp),
-        hi = (delim != 0 ? atoi(delim) : 0);     
+      int lo = atoi(lo_token),
+        hi = (hi_token != 0 ? atoi(hi_token) : 0);     
       Range r(lo,hi);
       *var = r;
+      delete[] lo_token;
+      if (hi_token != 0)
+        delete[] hi_token;
     }
     break;
   case T_variable : 
@@ -1385,7 +1372,6 @@ void InputMatrix::ParseToken(char *str, CfgToken *dst, Event *ref,
 ParsedExpression *InputMatrix::ParseExpression(const char *str, Event *ref,
                                                char enable_keynames) {
   char opstr[CfgMathOperation::numops+1];
-  char buf[255]; // Copy buf
   CfgMathOperation *first = 0,
     *last = 0;
   signed int firstopidx = -1;
@@ -1408,37 +1394,33 @@ ParsedExpression *InputMatrix::ParseExpression(const char *str, Event *ref,
   // Now, begin creating parsed expression
   ParsedExpression *exp = new ParsedExpression();
   // Parse beginning token
-  if (firstopidx == -1) {
-    strncpy(buf,str,255);
-    buf[254] = '\0';
-  }
-  else {
-    long len = MIN(firstopidx,254);
-    memcpy(buf,str,len);
-    buf[len] = '\0';
-  }
-  ParseToken(buf,&(exp->start),ref,enable_keynames);
+  FweelinTokenSpan span;
+  if (firstopidx == -1)
+    span = fweelin_split_token(str, '\0');
+  else
+    span = fweelin_split_token(str, *cur);
+  char *token = fweelin_dup_token(span);
+  ParseToken(token,&(exp->start),ref,enable_keynames);
+  delete[] token;
 
   while (cur != 0) {
     char op = *cur; // Store operand
-    cur++;
-    const char *next = strpbrk(cur,opstr);
+    span = fweelin_split_token(cur + 1, '\0');
+    const char *next = strpbrk(cur + 1,opstr);
+    if (next != 0) {
+      span.begin = cur + 1;
+      span.len = static_cast<size_t>(next - (cur + 1));
+      span.next = next;
+    } else {
+      span = fweelin_split_token(cur + 1, '\0');
+    }
 
-    // Copy the operand
-    long len;
-    if (next != 0)
-      len = (long)next-(long)cur;
-    else
-      len = strlen(cur);
-    if (len >= 255)
-      len = 254;
-    memcpy(buf,cur,len);
-    buf[len] = '\0';
-
-    // Now we have operator 'op' and operand in 'buf'
+    // Now we have operator 'op' and operand in 'token'
     CfgMathOperation *nw = new CfgMathOperation();
     nw->otype = op;
-    ParseToken(buf,&(nw->operand),ref,enable_keynames);
+    token = fweelin_dup_token(span);
+    ParseToken(token,&(nw->operand),ref,enable_keynames);
+    delete[] token;
     if (first == 0)
       first = last = nw;
     else {
@@ -1891,15 +1873,26 @@ void FloConfig::ConfigureBasics(xmlDocPtr /*doc*/, xmlNode *gen) {
         printf("CONFIG: Starting with %d max snapshots.\n",max_snapshots);
       } else if ((n = xmlGetProp(cur_node, 
                                  (const xmlChar *)"librarypath")) != 0) {
-        if (xmlStrchr(n,'~') == n) {
-          // Reference to home dir
-          char *homedir = getenv("HOME");
-          librarypath = new char[strlen(homedir)+xmlStrlen(n)+1];
-          strcpy(librarypath,homedir);
-          strcat(librarypath,(char *) &n[1]);
-        } else {
-          librarypath = new char[xmlStrlen(n)+1];
-          strcpy(librarypath,(char *) n);
+        const char *configured_librarypath = (const char *) n;
+        const char *homedir = getenv("HOME");
+
+        librarypath = new char[CFG_PATH_MAX];
+        switch (fweelin_expand_home_path(librarypath, CFG_PATH_MAX,
+                                         configured_librarypath, homedir)) {
+        case FWEELIN_PATH_EXPAND_OK:
+          break;
+
+        case FWEELIN_PATH_EXPAND_TRUNCATED:
+          printf("CONFIG: ERROR: Library path too long: '%s'\n",
+                 configured_librarypath);
+          xmlFree(n);
+          exit(1);
+
+        case FWEELIN_PATH_EXPAND_MISSING_HOME:
+          printf("CONFIG: ERROR: librarypath '%s' uses '~' but HOME is unset.\n",
+                 configured_librarypath);
+          xmlFree(n);
+          exit(1);
         }
 
         char *ptr = strrchr(librarypath,'/');
@@ -2222,11 +2215,7 @@ char FloConfig::IsStereoMaster() {
 // Extracts an array of floats (delimited by character delim_char)
 // from the given string- returns size of array in 'size'
 float *FloConfig::ExtractArray(const char *n, int *size, char delim_char) {
-  char buf[255];
-  strncpy(buf,n,254);
-  buf[254] = '\0';
-
-  char *delim = buf;
+  const char *delim = n;
   *size = 0;
   while (delim != 0) {
     (*size)++;
@@ -2238,29 +2227,21 @@ float *FloConfig::ExtractArray(const char *n, int *size, char delim_char) {
 
   float *array = new float[*size];
 
-  delim = buf;
+  delim = n;
   int i = 0;
   while (i < *size) {
-    char *nd = strchr(delim,delim_char);
-    if (nd != 0) {
-      *nd = '\0';
-      nd++;
-    }
-    //printf("%d: %s\n",i,delim);
-
-    array[i++] = atof(delim);
-    delim = nd;
+    FweelinTokenSpan span = fweelin_split_token(delim, delim_char);
+    char *token = fweelin_dup_token(span);
+    array[i++] = atof(token);
+    delete[] token;
+    delim = span.next;
   }
 
   return array;
 };
 
 int *FloConfig::ExtractArrayInt(const char *n, int *size, char delim_char) {
-  char buf[255];
-  strncpy(buf,n,254);
-  buf[254] = '\0';
-  
-  char *delim = buf;
+  const char *delim = n;
   *size = 0;
   while (delim != 0) {
     (*size)++;
@@ -2272,18 +2253,14 @@ int *FloConfig::ExtractArrayInt(const char *n, int *size, char delim_char) {
   
   int *array = new int[*size];
   
-  delim = buf;
+  delim = n;
   int i = 0;
   while (i < *size) {
-    char *nd = strchr(delim,delim_char);
-    if (nd != 0) {
-      *nd = '\0';
-      nd++;
-    }
-    //printf("%d: %s\n",i,delim);
-    
-    array[i++] = atoi(delim);
-    delim = nd;
+    FweelinTokenSpan span = fweelin_split_token(delim, delim_char);
+    char *token = fweelin_dup_token(span);
+    array[i++] = atoi(token);
+    delete[] token;
+    delim = span.next;
   }
   
   return array;
@@ -3657,7 +3634,7 @@ FloConfig::~FloConfig()
     delete [] stream_inputs;
 
   if (librarypath != 0)
-    delete librarypath;
+    delete[] librarypath;
 };
 
 FloConfig::FloConfig(Fweelin *app) : im(app), 
@@ -3673,7 +3650,8 @@ FloConfig::FloConfig(Fweelin *app) : im(app),
   vorbis_encode_quality(0.5),
 
   num_triggers(1024), 
-  vdelay(50000), preferred_audio_buffer_frames(128), showdebug(0), 
+  vdelay(50000), preferred_audio_buffer_frames(128),
+  showdebug(0), 
   layouts(0), fonts(0), displays(0), help(0),
                 
 #if USE_FLUIDSYNTH

@@ -6,6 +6,8 @@
 #ifndef __FWEELIN_MAC_H__
 #define __FWEELIN_MAC_H__
 
+struct SDL_Surface;
+
 // Interface class between Objective-C Mac OS X code and C++ Fweelin code
 class FweelinMac {
 public:
@@ -25,6 +27,7 @@ public:
 	static void SetDebugMode(int active);
 	static void Quit();
 	static void ShowHelp();
+  static SDL_Surface *LoadImage(const char *path);
 	
 	static void LinkSDLMain (void *m) { sdlmain = m; };
 	static void *sdlmain;			// Pointer to instance of SDLMain

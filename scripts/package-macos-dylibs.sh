@@ -8,6 +8,9 @@ cd "$repo_root"
 app_bundle="MacOSX/build/Release/fweelin.app"
 app_binary="$app_bundle/Contents/MacOS/fweelin"
 frameworks_dir="$app_bundle/Contents/Frameworks"
+resources_dir="$app_bundle/Contents/Resources"
+logo_src="extracted-assets/fweelin-logo_upscayl_4x_ultrasharp-4x.png"
+logo_dst="$resources_dir/fweelin-logo.png"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "package-macos-dylibs.sh must be run on macOS" >&2
@@ -20,6 +23,14 @@ if [[ ! -x "$app_binary" ]]; then
 fi
 
 mkdir -p "$frameworks_dir"
+mkdir -p "$resources_dir"
+
+if [[ ! -f "$logo_src" ]]; then
+  echo "Logo source not found at $logo_src" >&2
+  exit 1
+fi
+
+cp -f "$logo_src" "$logo_dst"
 
 typeset -A copied
 typeset -a queue

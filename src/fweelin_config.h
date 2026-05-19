@@ -98,6 +98,7 @@ extern char *FWEELIN_DATADIR;
 #include "fweelin_audioio.h"
 #include "fweelin_event.h"
 #include "fweelin_videoio.h" // TTF_Font decl
+#include "fweelin_video_scaling.h"
 
 class Event;
 class SDLIO;
@@ -345,7 +346,8 @@ class FloLayoutElementGeometry {
 
   // Draw this element to the given screen-
   // implementation given in videoio.cc
-  virtual void Draw(SDL_Surface *screen, SDL_Color clr) = 0;
+  virtual void Draw(SDL_Surface *screen, SDL_Color clr,
+                    const FweelinRenderMetrics &metrics) = 0;
 
   // Inside returns nonzero if the given coordinates fall inside this
   // element geometry
@@ -360,7 +362,8 @@ class FloLayoutBox : public FloLayoutElementGeometry {
 
   // Draw this element to the given screen-
   // implementation given in videoio.cc
-  virtual void Draw(SDL_Surface *screen, SDL_Color clr);
+  virtual void Draw(SDL_Surface *screen, SDL_Color clr,
+                    const FweelinRenderMetrics &metrics);
 
   // Inside returns nonzero if the given coordinates fall inside this
   // element geometry
@@ -371,7 +374,7 @@ class FloLayoutBox : public FloLayoutElementGeometry {
     else
       return 0;
   };
-  
+
   // Outlines along borders?
   char lineleft, linetop, lineright, linebottom;
   // Coordinates of box
@@ -443,7 +446,7 @@ class FloLayout {
       cur = tmp;
     }
   };
-  
+
   int id, // User refers to a layout by layout ID
     iid,  // Interface id. Interface id + layout id uniquely identify 
           // a layout
@@ -524,7 +527,9 @@ class FloDisplay {
 
   // Draw this display to the given screen-
   // implementation given in videoio.cc
-  virtual void Draw(SDL_Surface *screen) = 0;
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics) = 0;
+  virtual void ResetRenderCache() {};
 
   virtual FloDisplayType GetFloDisplayType() { return FD_Unknown; };
 
@@ -556,7 +561,8 @@ class FloDisplayPanel : public FloDisplay
       delete[] child_displays;
   };
 
-  virtual void Draw(SDL_Surface *screen);
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics);
 
   // Set whether this display is showing
   virtual void SetShow(char show) {
@@ -582,7 +588,8 @@ class FloDisplayText : public FloDisplay
  public:
   FloDisplayText (int iid) : FloDisplay(iid) {};
 
-  virtual void Draw(SDL_Surface *screen);
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics);
 };
 
 // Switch display shows the title in different color depending on the value of
@@ -592,7 +599,8 @@ class FloDisplaySwitch : public FloDisplay
  public:
   FloDisplaySwitch (int iid) : FloDisplay(iid) {};
 
-  virtual void Draw(SDL_Surface *screen);
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics);
 };
 
 // Circle switch display shows a circle which changes color and optionally
@@ -603,7 +611,8 @@ class FloDisplayCircleSwitch : public FloDisplay
   FloDisplayCircleSwitch (int iid) : FloDisplay(iid), rad1(0), rad0(0), flash(0), prevnonz(0), 
     nonztime(0.) {};
 
-  virtual void Draw(SDL_Surface *screen);
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics);
 
   int rad1, rad0; // Radii of circle when switch is on or off
 
@@ -620,7 +629,8 @@ class FloDisplayTextSwitch : public FloDisplay
  public:
   FloDisplayTextSwitch (int iid) : FloDisplay(iid), text1(0), text0(0) {};
 
-  virtual void Draw(SDL_Surface *screen);
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics);
 
   char *text1, // Text for nonzero value
     *text0;    // Text for zero value
@@ -638,7 +648,8 @@ class FloDisplayBar : public FloDisplay
   FloDisplayBar (int iid) : FloDisplay(iid), 
     orient(O_Vertical), barscale(1.0), thickness(10), dbscale(0), marks(0), maxdb(0) {};
 
-  virtual void Draw(SDL_Surface *screen);
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics);
 
   CfgOrientation orient; // Orientation of bar
   float barscale; // Scaling factor for size of bar
@@ -661,7 +672,8 @@ class FloDisplayBarSwitch : public FloDisplayBar
       delete switchexp;
   };
 
-  virtual void Draw(SDL_Surface *screen);
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics);
 
   ParsedExpression *switchexp; // Expression which evaluates to a value. Nonzero values cause the bar 
                                // to appear bright, zero values cause a dim, faded bar
@@ -676,7 +688,8 @@ class FloDisplaySquares : public FloDisplay
  public:
   FloDisplaySquares (int iid) : FloDisplay(iid), orient(O_Horizontal) {};
 
-  virtual void Draw(SDL_Surface *screen);
+  virtual void Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics);
 
   CfgOrientation orient; // Orientation of bar
   float v1, v2,          // Value corresponding to first and last square
@@ -806,7 +819,6 @@ class FloConfig {
   void ConfigureInterfaces (xmlDocPtr /*doc*/, xmlNode *ifs, char firstpass);
   void ConfigureRoot (xmlDocPtr doc, xmlNode *root, int interfaceid = 0,
                       char firstpass = 0);
-  
   // Is node 'n' a comment with help information? If so, add to our
   // internal help list
   void CheckForHelp(xmlNode *n);

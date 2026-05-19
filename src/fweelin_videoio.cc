@@ -41,8 +41,12 @@
 
 #include "fweelin_videoio.h"
 #include "fweelin_core.h"
+#include "fweelin_browser.h"
 #include "fweelin_paramset.h"
+#include "fweelin_video_scaling.h"
+#ifndef __MACOSX__
 #include "fweelin_logo.h"
+#endif
 
 static Uint8 GetWindowBitsPerPixel() {
   SDL_DisplayMode mode;
@@ -53,6 +57,9 @@ static Uint8 GetWindowBitsPerPixel() {
 
 static Uint32 GetWindowFlags(char fullscreen) {
   Uint32 flags = SDL_WINDOW_SHOWN;
+#ifdef __MACOSX__
+  flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
   if (fullscreen)
     flags |= SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_BORDERLESS;
   return flags;
@@ -903,6 +910,7 @@ char VideoIO::DrawLoop(LoopManager *loopmgr, int i,
   const static SDL_Color txtclr = { 0xFF, 0x50, 0x20, 0 },
     cursorclr = { 0xEF, 0x11, 0x11, 0 },
     txtclr2 = { 0xEF, 0xAF, 0xFF, 0 };
+  const FweelinRenderMetrics &metrics = render_metrics;
 
   // Color for selected loops
   static SDL_Color selcolor[4] = { { 0xF9, 0xE6, 0x13, 0 }, 
@@ -912,9 +920,9 @@ char VideoIO::DrawLoop(LoopManager *loopmgr, int i,
   
   const float cpeak_mul = 2.0, // For pulsing loops - magnitude of pulse
     cpeak_base = 0.5; // For pulsing loops - base size of loop 
-  const int lscope_maxmag = OCY(15),
-    lscopemag = OCY(20),
-    looppiemag = OCX(20);
+  const int lscope_maxmag = metrics.ScaleY(15),
+    lscopemag = metrics.ScaleY(20),
+    looppiemag = metrics.ScaleX(20);
 
   BED_PeaksAvgs *pa;
   nframes_t plen = 0;
@@ -1057,14 +1065,15 @@ char VideoIO::DrawLoop(LoopManager *loopmgr, int i,
   int dispx, dispy;
   if (curel != 0) {
     // Show in layout
-    loopmap = curel->loopmap;
-    dispx = curel->loopx;
-    dispy = curel->loopy;
+    int scaled_loopsize = metrics.ScaleX(curel->loopsize);
+    loopmap = CreateMap(lscopepic, scaled_loopsize);
+    dispx = metrics.ScaleX(curel->loopx);
+    dispy = metrics.ScaleY(curel->loopy);
   } else {
     // Show direct on screen
     loopmap = direct_map;
-    dispx = direct_xpos;
-    dispy = direct_ypos;
+    dispx = metrics.ScaleX(direct_xpos);
+    dispy = metrics.ScaleY(direct_ypos);
   }
   int fullx = loopmap->map_xs,
     fully = loopmap->map_ys,
@@ -1215,6 +1224,30 @@ CircularMap *VideoIO::CreateMap(SDL_Surface *lscopepic, int sz) {
   return nw;
 };
 
+void VideoIO::ResetCachedRenderGeometry() {
+  while (cmaps != 0) {
+    CircularMap *next = cmaps->next;
+    delete cmaps;
+    cmaps = next;
+  }
+
+  FloLayout *layout = app->getCFG()->GetLayouts();
+  while (layout != 0) {
+    FloLayoutElement *elem = layout->elems;
+    while (elem != 0) {
+      elem->loopmap = 0;
+      elem = elem->next;
+    }
+    layout = layout->next;
+  }
+
+  FloDisplay *display = app->getCFG()->GetDisplays();
+  while (display != 0) {
+    display->ResetRenderCache();
+    display = display->next;
+  }
+}
+
 #ifdef LCD_DISPLAY
 int VideoIO::InitLCD (char *devname, int baud) {
   struct termios term; 
@@ -1323,6 +1356,7 @@ void VideoIO::video_event_loop ()
 {
   FloConfig *fs = app->getCFG();
   LoopManager *loopmgr = app->getLOOPMGR();
+  const FweelinRenderMetrics &metrics = render_metrics;
 
 #ifndef NO_VIDEO
 
@@ -1364,22 +1398,22 @@ void VideoIO::video_event_loop ()
     oldpeak[i] = 1.0;  
 
   // Video coordinates & settings
-  const int patchx = OCX(35),
-    patchy = OCY(460),
+  const int patchx = metrics.ScaleX(35),
+    patchy = metrics.ScaleY(460),
 
-    pulsex = OCX(600),
-    pulsey = OCY(30),
-    pulsespc = OCY(40),
-    pulsepiemag = OCX(10),
+    pulsex = metrics.ScaleX(600),
+    pulsey = metrics.ScaleY(30),
+    pulsespc = metrics.ScaleY(40),
+    pulsepiemag = metrics.ScaleX(10),
 
-    progressbar_x = OCX(20),
-    progressbar_y = OCY(400),
-    progressbar_xs = OCX(640)-progressbar_x*2,
-    progressbar_ys = OCY(20);
+    progressbar_x = metrics.ScaleX(20),
+    progressbar_y = metrics.ScaleY(400),
+    progressbar_xs = metrics.ScaleX(640)-progressbar_x*2,
+    progressbar_ys = metrics.ScaleY(20);
 
   // Flat loop scope dimensions--
-  lscopewidth = OCX(320);
-  lscopeheight = OCY(30);
+  lscopewidth = metrics.ScaleX(320);
+  lscopeheight = metrics.ScaleY(30);
 
   const static float loop_colorbase = 0.5;
 
@@ -1408,7 +1442,7 @@ void VideoIO::video_event_loop ()
   while (curlayout != 0) {
     FloLayoutElement *curel = curlayout->elems;
     while (curel != 0) {
-      int sz = curel->loopsize;
+      int sz = metrics.ScaleX(curel->loopsize);
       if (sz > 0)
         curel->loopmap = CreateMap(lscopepic,sz);
  
@@ -1446,6 +1480,19 @@ void VideoIO::video_event_loop ()
 
   // Logo image
   SDL_Surface *logopic = 0;
+  int logo_draw_w = metrics.ScaleX(223);
+  int logo_draw_h = metrics.ScaleY(42);
+  int version_margin_x = metrics.ScaleX(5);
+  int version_margin_y = metrics.ScaleY(5);
+#ifdef __MACOSX__
+  char logo_path[2048];
+  snprintf(logo_path, sizeof(logo_path), "%s/%s", FWEELIN_DATADIR,
+           FWEELIN_LOGO_IMAGE);
+  logopic = FweelinMac::LoadImage(logo_path);
+  if (logopic == 0)
+    printf("VIDEO: Warning: Couldn't load logo image from '%s'.\n",
+           logo_path);
+#else
   if (fweelin_logo.bytes_per_pixel != 4)
     printf("VIDEO: Warning: Logo image must be 32-bit.\n");
   else {
@@ -1461,11 +1508,14 @@ void VideoIO::video_event_loop ()
            fweelin_logo.width * fweelin_logo.height * 
            fweelin_logo.bytes_per_pixel);
   }
+  logo_draw_w = fweelin_logo.width;
+  logo_draw_h = fweelin_logo.height;
+#endif
 
   // Help setup
-  const static int helpx = OCX(0),
-    helpy = OCY(10),
-    helpmaxy2 = OCY(460),
+  const int helpx = metrics.ScaleX(0),
+    helpy = metrics.ScaleY(10),
+    helpmaxy2 = metrics.ScaleY(460),
     maxhelppages = 255; // Maximum # of help pages
   int helpstartidx[maxhelppages], helpendidx[maxhelppages], curstartidx;
   int helpx2 = helpx,
@@ -1681,7 +1731,7 @@ void VideoIO::video_event_loop ()
           // Draw each geometry of this element
           FloLayoutElementGeometry *curgeo = curel->geo;
           while (curgeo != 0) {
-            curgeo->Draw(screen,elclr);
+            curgeo->Draw(screen,elclr,metrics);
             curgeo = curgeo->next;
           }
 
@@ -1694,7 +1744,9 @@ void VideoIO::video_event_loop ()
 
           // Label this element
           if (curlayout->showelabel)
-            draw_text(screen,mainfont,curel->name,curel->nxpos,curel->nypos,
+            draw_text(screen,mainfont,curel->name,
+                      metrics.ScaleX(curel->nxpos),
+                      metrics.ScaleY(curel->nypos),
                       white);
 
           curel = curel->next;
@@ -1704,7 +1756,9 @@ void VideoIO::video_event_loop ()
         // Label the layout
         if (curlayout->showlabel)
           draw_text(screen,mainfont,curlayout->name,
-                    curlayout->nxpos,curlayout->nypos,white);
+                    metrics.ScaleX(curlayout->nxpos),
+                    metrics.ScaleY(curlayout->nypos),
+                    white);
       }
 
       curlayout = curlayout->next;
@@ -1868,7 +1922,7 @@ void VideoIO::video_event_loop ()
     FloDisplay *curdisplay = fs->GetDisplays();
     while (curdisplay != 0) {
       if (curdisplay->show || curdisplay->forceshow)
-        curdisplay->Draw(screen);
+        curdisplay->Draw(screen, metrics);
       curdisplay = curdisplay->next;
     }
 #endif
@@ -2002,54 +2056,54 @@ void VideoIO::video_event_loop ()
         t_floatout = 4.0;
       if (titlepct < 1.0) {
         SDL_Rect dst;
-        dst.x = screen->w-logopic->w;
-        dst.y = (int) (-logopic->h + screen->h*titlepct);
-        dst.w = logopic->w;
-        dst.h = logopic->h;
-    SDL_BlitSurface(logopic, nullptr, screen, &dst);
+        dst.x = screen->w-logo_draw_w;
+        dst.y = (int) (-logo_draw_h + screen->h*titlepct);
+        dst.w = logo_draw_w;
+        dst.h = logo_draw_h;
+        SDL_BlitScaled(logopic, nullptr, screen, &dst);
       } else if (titlepct > t_floatin && titlepct < t_floatin+1.0) {
         SDL_Rect dst;
-        dst.x = screen->w-logopic->w;
-        dst.y = screen->h-logopic->h;
-        dst.w = logopic->w;
-        dst.h = logopic->h;
-    SDL_BlitSurface(logopic, nullptr, screen, &dst);
+        dst.x = screen->w-logo_draw_w;
+        dst.y = screen->h-logo_draw_h;
+        dst.w = logo_draw_w;
+        dst.h = logo_draw_h;
+        SDL_BlitScaled(logopic, nullptr, screen, &dst);
         int ver_x, ver_y;
         TTF_SizeText(mainfont,VERSION,&ver_x,&ver_y);
         draw_text(screen,mainfont,VERSION,
-                  (int) (screen->w-(titlepct-t_floatin)*(ver_x+5)),
-                  screen->h-ver_y-5,truewhite);
+                  (int) (screen->w-(titlepct-t_floatin)*(ver_x+version_margin_x)),
+                  screen->h-ver_y-version_margin_y,truewhite);
       } else if (titlepct >= t_floatin && titlepct <= t_floatout) {
         SDL_Rect dst;
-        dst.x = screen->w-logopic->w;
-        dst.y = screen->h-logopic->h;
-        dst.w = logopic->w;
-        dst.h = logopic->h;
-    SDL_BlitSurface(logopic, nullptr, screen, &dst);
+        dst.x = screen->w-logo_draw_w;
+        dst.y = screen->h-logo_draw_h;
+        dst.w = logo_draw_w;
+        dst.h = logo_draw_h;
+        SDL_BlitScaled(logopic, nullptr, screen, &dst);
         int ver_x, ver_y;
         TTF_SizeText(mainfont,VERSION,&ver_x,&ver_y);
         draw_text(screen,mainfont,VERSION,
-                  screen->w-(ver_x+5),
-                  screen->h-ver_y-5,truewhite);
+                  screen->w-(ver_x+version_margin_x),
+                  screen->h-ver_y-version_margin_y,truewhite);
       } else if (titlepct > t_floatout && titlepct < t_floatout+1.0) {
         SDL_Rect dst;
-        dst.x = screen->w-logopic->w;
-        dst.y = screen->h-logopic->h;
-        dst.w = logopic->w;
-        dst.h = logopic->h;
-    SDL_BlitSurface(logopic, nullptr, screen, &dst);
+        dst.x = screen->w-logo_draw_w;
+        dst.y = screen->h-logo_draw_h;
+        dst.w = logo_draw_w;
+        dst.h = logo_draw_h;
+        SDL_BlitScaled(logopic, nullptr, screen, &dst);
         int ver_x, ver_y;
         TTF_SizeText(mainfont,VERSION,&ver_x,&ver_y);
         draw_text(screen,mainfont,VERSION,
-                  (int) (screen->w-(1.0-(titlepct-t_floatout))*(ver_x+5)),
-                  screen->h-ver_y-5,truewhite);
+                  (int) (screen->w-(1.0-(titlepct-t_floatout))*(ver_x+version_margin_x)),
+                  screen->h-ver_y-version_margin_y,truewhite);
       } else {
         SDL_Rect dst;
-        dst.x = screen->w-logopic->w;
-        dst.y = screen->h-logopic->h;
-        dst.w = logopic->w;
-        dst.h = logopic->h;
-    SDL_BlitSurface(logopic, nullptr, screen, &dst);
+        dst.x = screen->w-logo_draw_w;
+        dst.y = screen->h-logo_draw_h;
+        dst.w = logo_draw_w;
+        dst.h = logo_draw_h;
+        SDL_BlitScaled(logopic, nullptr, screen, &dst);
       }
     }
 #endif
@@ -2104,9 +2158,14 @@ void VideoIO::SetVideoMode(char fullscreen) {
 
   this->fullscreen = fullscreen;
 
+  if (windowed_width == 0 || windowed_height == 0) {
+    windowed_width = app->getCFG()->GetVSize()[0];
+    windowed_height = app->getCFG()->GetVSize()[1];
+  }
+
   /* Set right video mode */
-  int XSIZE = app->getCFG()->GetVSize()[0],
-    YSIZE = app->getCFG()->GetVSize()[1];
+  int XSIZE = windowed_width,
+    YSIZE = windowed_height;
   window = CreateVideoWindow(XSIZE, YSIZE, fullscreen);
   if (window == 0) {
     printf("VIDEO: Couldn't create %ix%i window: %s\n", XSIZE, YSIZE,
@@ -2119,6 +2178,23 @@ void VideoIO::SetVideoMode(char fullscreen) {
            SDL_GetError());
     exit(1);
   }
+
+  int logical_width = 0;
+  int logical_height = 0;
+  SDL_GetWindowSize(window, &logical_width, &logical_height);
+  render_metrics = FweelinRenderMetrics::FromDrawableSize(logical_width,
+                                                          logical_height,
+                                                          screen->w,
+                                                          screen->h);
+  if (!fullscreen) {
+    windowed_width = render_metrics.logical_width;
+    windowed_height = render_metrics.logical_height;
+  }
+  ResetCachedRenderGeometry();
+  printf("VIDEO: Window logical size %dx%d, drawable size %dx%d, scale %.2fx%.2f\n",
+         render_metrics.logical_width, render_metrics.logical_height,
+         render_metrics.drawable_width, render_metrics.drawable_height,
+         render_metrics.scale_x, render_metrics.scale_y);
 
   /* Use alpha blending */
   //SDL_SetAlpha(inst->screen, SDL_SRCALPHA, 0);
@@ -2168,6 +2244,7 @@ void *VideoIO::run_video_thread(void *ptr)
         snprintf(fweelin_font_path,255,"%s/fonts/%s",FWEELIN_DATADIR,cur->filename);
         snprintf(bundled_font_path,255,"%s/%s",FWEELIN_DATADIR,font_basename);
         printf("VIDEO: Loading %s font: %s (%d pt)\n",cur->name,cur->filename,cur->size);
+        int scaled_font_size = inst->ScaleFont(cur->size);
 
         struct stat st;
         if (stat(system_font_path,&st) != 0 &&
@@ -2180,11 +2257,11 @@ void *VideoIO::run_video_thread(void *ptr)
           exit(1);
         }
 
-        cur->font = TTF_OpenFont(system_font_path, cur->size);
+        cur->font = TTF_OpenFont(system_font_path, scaled_font_size);
         if (cur->font == 0)
-          cur->font = TTF_OpenFont(fweelin_font_path, cur->size);
+          cur->font = TTF_OpenFont(fweelin_font_path, scaled_font_size);
         if (cur->font == 0)
-          cur->font = TTF_OpenFont(bundled_font_path, cur->size);
+          cur->font = TTF_OpenFont(bundled_font_path, scaled_font_size);
         if (cur->font == 0) {
           printf("VIDEO: Couldn't load %d pt font: %s "
                  "from either %s/, %s/ or /usr/share/fonts/\n"

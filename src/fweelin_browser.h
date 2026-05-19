@@ -273,8 +273,14 @@ class Browser : public FloDisplay, public EventListener, public EventProducer,
   void ReceiveEvent(Event *ev, EventProducer */*from*/) override;
 
   // Draw to screen
-  void Draw(SDL_Surface *screen) override;
-  virtual void Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y);
+  void Draw(SDL_Surface *screen, const FweelinRenderMetrics &metrics) override;
+  virtual void Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y,
+                         const FweelinRenderMetrics &metrics);
+  void ResetRenderCache() override {
+    xpand_centery = -1;
+    xpand_liney = -1;
+    xpand_spread = -1;
+  }
 
   virtual void ClearAllItems();
   
@@ -362,8 +368,14 @@ class LoopTray : public Browser {
   void Setup(Fweelin *a, BrowserCallback *c) override;
 
   // Draw to screen
-  void Draw(SDL_Surface *screen) override;
-  void Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) override;
+  void Draw(SDL_Surface *screen, const FweelinRenderMetrics &metrics) override;
+  void Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y,
+                 const FweelinRenderMetrics &metrics) override;
+  void ResetRenderCache() override {
+    Browser::ResetRenderCache();
+    loopmap = 0;
+    touchtray = 1;
+  }
 
   // Receive events
   void ReceiveEvent(Event *ev, EventProducer *from) override;
@@ -618,8 +630,11 @@ class FloDisplaySnapshots : public FloDisplay, public RenameCallback
   };
   
   FloDisplayType GetFloDisplayType() override { return FD_Snapshots; };
-
-  void Draw(SDL_Surface *screen) override;
+  void Draw(SDL_Surface *screen,
+            const FweelinRenderMetrics &metrics) override;
+  void ResetRenderCache() override {
+    numdisp = -1;
+  }
 
   ItemRenamer *renamer; // Renamer instance, or null if we are not renaming
   int rename_idx;       // Index of snapshot we are renaming

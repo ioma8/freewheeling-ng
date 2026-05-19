@@ -20,3 +20,5 @@ if otool -L MacOSX/build/Release/fweelin.app/Contents/MacOS/fweelin | rg -q '/op
 fi
 
 zsh scripts/run-runtime-regression-tests.sh
+zsh scripts/test-startup-librarypath-regression.sh
+zsh scripts/test-macos-retina-config.sh

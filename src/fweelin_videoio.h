@@ -19,6 +19,7 @@
    along with Freewheeling.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "fweelin_event.h"
+#include "fweelin_video_scaling.h"
 
 #include <SDL2/SDL.h>
 
@@ -47,6 +48,7 @@
 #define OCY(y) (app->getCFG()->YCvt((float)(y)/480))
 
 #define FWEELIN_TITLE_IMAGE FWEELIN_DATADIR "/fweelin.bmp"
+#define FWEELIN_LOGO_IMAGE "fweelin-logo.png"
 
 extern double mygettime(void);
 extern int myround(float num);
@@ -104,7 +106,9 @@ class VideoIO : public EventProducer, public EventListener {
 
 public:
   VideoIO (Fweelin *app) : app(app), screen(nullptr), window(nullptr), cmaps(nullptr),
-    showlooprange(0,0), showhelppage(0), cur_iid(0), videothreadgo(0) {};
+    showlooprange(0,0), showhelppage(0), cur_iid(0), video_time(0.0),
+    videothreadgo(0), render_metrics{640, 480, 640, 480, 1.0f, 1.0f},
+    windowed_width(0), windowed_height(0) {};
 
   ~VideoIO() override = default;
 
@@ -114,6 +118,14 @@ public:
   constexpr char IsActive () const { return videothreadgo; };
 
   constexpr double GetVideoTime() const { return video_time; };
+  constexpr const FweelinRenderMetrics &GetRenderMetrics() const {
+    return render_metrics;
+  };
+  inline int ScaleX(int value) const { return render_metrics.ScaleX(value); };
+  inline int ScaleY(int value) const { return render_metrics.ScaleY(value); };
+  inline int ScaleFont(int point_size) const {
+    return render_metrics.ScaleFont(point_size);
+  };
 
   void SetVideoMode(char fullscreen);
   constexpr char GetVideoMode() const { return fullscreen; };
@@ -146,6 +158,7 @@ public:
                 
                 float lvol,
                 char drawtext = 1);
+  void ResetCachedRenderGeometry();
 
  protected:
 
@@ -197,6 +210,9 @@ public:
 
   pthread_t video_thread;
   char videothreadgo;
+  FweelinRenderMetrics render_metrics;
+  int windowed_width;
+  int windowed_height;
 
   pthread_mutex_t video_thread_lock;
   

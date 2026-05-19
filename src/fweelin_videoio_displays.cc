@@ -34,25 +34,31 @@
 #include <sched.h>
 #include <sys/mman.h>
 
+#include "fweelin_string_utils.h"
 #include "fweelin_videoio.h"
 #include "fweelin_core.h"
 #include "fweelin_paramset.h"
-#include "fweelin_logo.h"
 
-void FloDisplayPanel::Draw(SDL_Surface *screen) {
+void FloDisplayPanel::Draw(SDL_Surface *screen,
+                           const FweelinRenderMetrics &metrics) {
   const static SDL_Color titleclr = { 0x77, 0x88, 0x99, 0 };
   const static SDL_Color borderclr = { 0xFF, 0x50, 0x20, 0 };
+  int draw_x = metrics.ScaleX(xpos);
+  int draw_y = metrics.ScaleY(ypos);
+  int draw_sx = metrics.ScaleX(sx);
+  int draw_sy = metrics.ScaleY(sy);
+  int draw_margin = metrics.ScaleX(margin);
 
   boxRGBA(screen,
-          xpos,ypos,xpos+sx,ypos+sy,
+          draw_x,draw_y,draw_x+draw_sx,draw_y+draw_sy,
           0,0,0,190);
-  vlineRGBA(screen,xpos,ypos,ypos+sy,
+  vlineRGBA(screen,draw_x,draw_y,draw_y+draw_sy,
             borderclr.r,borderclr.g,borderclr.b,255);
-  vlineRGBA(screen,xpos+sx,ypos,ypos+sy,
+  vlineRGBA(screen,draw_x+draw_sx,draw_y,draw_y+draw_sy,
             borderclr.r,borderclr.g,borderclr.b,255);
-  hlineRGBA(screen,xpos,xpos+sx,ypos,
+  hlineRGBA(screen,draw_x,draw_x+draw_sx,draw_y,
             borderclr.r,borderclr.g,borderclr.b,255);
-  hlineRGBA(screen,xpos,xpos+sx,ypos+sy,
+  hlineRGBA(screen,draw_x,draw_x+draw_sx,draw_y+draw_sy,
             borderclr.r,borderclr.g,borderclr.b,255);
 
   if (font == 0 || font->font == 0) {
@@ -66,10 +72,11 @@ void FloDisplayPanel::Draw(SDL_Surface *screen) {
   // Draw title
   if (title != 0)
     VideoIO::draw_text(screen,font->font,
-                       title,xpos+sx-margin,ypos,titleclr,2,0);
+                       title,draw_x+draw_sx-draw_margin,draw_y,titleclr,2,0);
 }
 
-void LoopTray::Draw(SDL_Surface *screen) {
+void LoopTray::Draw(SDL_Surface *screen,
+                    const FweelinRenderMetrics &metrics) {
   const static SDL_Color borderclr = {100, 100, 90, 0};
 
   LockBrowser();
@@ -80,46 +87,55 @@ void LoopTray::Draw(SDL_Surface *screen) {
 
   // Generate circular map for loop tray
   if (loopmap == 0)
-    loopmap = vid->CreateMap(vid->getLSCOPEPIC(),loopsize);
+    loopmap = vid->CreateMap(vid->getLSCOPEPIC(), metrics.ScaleX(loopsize));
+
+  int draw_x = metrics.ScaleX(xpos);
+  int draw_y = metrics.ScaleY(ypos);
+  int draw_iconsize = metrics.ScaleX(iconsize);
+  int draw_xpand_x1 = metrics.ScaleX(xpand_x1);
+  int draw_xpand_y1 = metrics.ScaleY(xpand_y1);
+  int draw_xpand_x2 = metrics.ScaleX(xpand_x2);
+  int draw_xpand_y2 = metrics.ScaleY(xpand_y2);
+  int draw_basepos = metrics.ScaleX(basepos);
 
   // Draw iconified version
-  boxRGBA(screen,xpos,ypos,xpos+iconsize,ypos+iconsize,
+  boxRGBA(screen,draw_x,draw_y,draw_x+draw_iconsize,draw_y+draw_iconsize,
           borderclr.r,borderclr.g,borderclr.b,255);
-  hlineRGBA(screen,xpos,xpos+iconsize,ypos,40,40,40,255);
-  hlineRGBA(screen,xpos,xpos+iconsize,ypos+iconsize,40,40,40,255);
-  vlineRGBA(screen,xpos,ypos,ypos+iconsize,40,40,40,255);
-  vlineRGBA(screen,xpos+iconsize,ypos,ypos+iconsize,40,40,40,255);
-  FILLED_PIE(screen,xpos+iconsize/2,ypos+iconsize/2,
-             iconsize*3/8,
+  hlineRGBA(screen,draw_x,draw_x+draw_iconsize,draw_y,40,40,40,255);
+  hlineRGBA(screen,draw_x,draw_x+draw_iconsize,draw_y+draw_iconsize,40,40,40,255);
+  vlineRGBA(screen,draw_x,draw_y,draw_y+draw_iconsize,40,40,40,255);
+  vlineRGBA(screen,draw_x+draw_iconsize,draw_y,draw_y+draw_iconsize,40,40,40,255);
+  FILLED_PIE(screen,draw_x+draw_iconsize/2,draw_y+draw_iconsize/2,
+             draw_iconsize*3/8,
              30,359,
              0xF9,0xE6,0x13,255);
-  circleRGBA(screen,xpos+iconsize/2,ypos+iconsize/2,
-             iconsize*3/8,
+  circleRGBA(screen,draw_x+draw_iconsize/2,draw_y+draw_iconsize/2,
+             draw_iconsize*3/8,
              40,40,40, 255); // Outline
 
   if (xpanded) {
     // Draw background
     {
-      int xpand_yb1 = xpand_y1+basepos,
-        xpand_yb2 = xpand_y2-basepos,
-        xpand_xb1 = xpand_x1+basepos,
-        xpand_xb2 = xpand_x2-basepos;
+      int xpand_yb1 = draw_xpand_y1+draw_basepos,
+        xpand_yb2 = draw_xpand_y2-draw_basepos,
+        xpand_xb1 = draw_xpand_x1+draw_basepos,
+        xpand_xb2 = draw_xpand_x2-draw_basepos;
 
-      boxRGBA(screen,xpand_x1,xpand_y1,xpand_xb1,xpand_y2,
+      boxRGBA(screen,draw_xpand_x1,draw_xpand_y1,xpand_xb1,draw_xpand_y2,
               borderclr.r,borderclr.g,borderclr.b,255);
-      boxRGBA(screen,xpand_xb1,xpand_y1,xpand_x2,xpand_y2,
+      boxRGBA(screen,xpand_xb1,draw_xpand_y1,draw_xpand_x2,draw_xpand_y2,
               borderclr.r,borderclr.g,borderclr.b,255);
-      boxRGBA(screen,xpand_x1,xpand_y1,xpand_x2,xpand_yb1,
+      boxRGBA(screen,draw_xpand_x1,draw_xpand_y1,draw_xpand_x2,xpand_yb1,
               borderclr.r,borderclr.g,borderclr.b,255);
-      boxRGBA(screen,xpand_x1,xpand_yb2,xpand_x2,xpand_y2,
+      boxRGBA(screen,draw_xpand_x1,xpand_yb2,draw_xpand_x2,draw_xpand_y2,
               borderclr.r,borderclr.g,borderclr.b,255);
       boxRGBA(screen,xpand_xb1,xpand_yb1,xpand_xb2,xpand_yb2,0,0,0,255);
     }
 
-    hlineRGBA(screen,xpand_x1,xpand_x2,xpand_y1,40,40,40,255);
-    hlineRGBA(screen,xpand_x1,xpand_x2,xpand_y2,40,40,40,255);
-    vlineRGBA(screen,xpand_x1,xpand_y1,xpand_y2,40,40,40,255);
-    vlineRGBA(screen,xpand_x2,xpand_y1,xpand_y2,40,40,40,255);
+    hlineRGBA(screen,draw_xpand_x1,draw_xpand_x2,draw_xpand_y1,40,40,40,255);
+    hlineRGBA(screen,draw_xpand_x1,draw_xpand_x2,draw_xpand_y2,40,40,40,255);
+    vlineRGBA(screen,draw_xpand_x1,draw_xpand_y1,draw_xpand_y2,40,40,40,255);
+    vlineRGBA(screen,draw_xpand_x2,draw_xpand_y1,draw_xpand_y2,40,40,40,255);
 
     LoopTrayItem *curl = (LoopTrayItem *) first;
 
@@ -163,7 +179,7 @@ void LoopTray::Draw(SDL_Surface *screen) {
     char go = 1;
     while (curl != 0 && go) {
       if (curl->xpos != -1)
-        Draw_Item(screen,curl,xpand_x1+curl->xpos,xpand_y1+curl->ypos);
+        Draw_Item(screen,curl,xpand_x1+curl->xpos,xpand_y1+curl->ypos,metrics);
       else
         go = 0;
 
@@ -174,7 +190,8 @@ void LoopTray::Draw(SDL_Surface *screen) {
   UnlockBrowser();
 };
 
-void LoopTray::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
+void LoopTray::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y,
+                         const FweelinRenderMetrics &metrics) {
   const static float loop_colorbase = 0.5;
   const static SDL_Color white = { 0xEF, 0xAF, 0xFF, 0 };
   const static SDL_Color cursorclr = { 0xEF, 0x11, 0x11, 0 };
@@ -185,6 +202,9 @@ void LoopTray::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
 
   LoopManager *loopmgr = app->getLOOPMGR();
   LoopTrayItem *li = (LoopTrayItem *) i;
+  int draw_x = metrics.ScaleX(x);
+  int draw_y = metrics.ScaleY(y);
+  int draw_loopsize = metrics.ScaleX(loopsize);
 
   float colormag;
   char loopexists;
@@ -206,7 +226,7 @@ void LoopTray::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
                  app->getMASTERLIMITER()->GetLimiterVolume(),0)) {
       // Place name
       if (li->placename != 0)
-        VideoIO::draw_text(screen,font->font,li->placename,x,y,white);
+        VideoIO::draw_text(screen,font->font,li->placename,draw_x,draw_y,white);
 
       // Loop name
       if (xpand_liney == -1)
@@ -218,11 +238,11 @@ void LoopTray::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
 
         // Draw text with cursor
         int sx, sy;
-        int txty = y+loopsize-xpand_liney;
+        int txty = draw_y+draw_loopsize-xpand_liney;
         const char *curn = renamer->GetCurName();
         if (*curn != '\0')
           VideoIO::draw_text(screen,font->font,curn,
-                             x,txty,white,0,0,&sx,&sy);
+                             draw_x,txty,white,0,0,&sx,&sy);
         else {
           sx = 0;
           sy = xpand_liney;
@@ -230,12 +250,12 @@ void LoopTray::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
 
         if (rui->rename_cursor_toggle)
           boxRGBA(screen,
-                  x+sx,txty,
-                  x+sx+sy/2,txty+sy,
+                  draw_x+sx,txty,
+                  draw_x+sx+sy/2,txty+sy,
                   cursorclr.r,cursorclr.g,cursorclr.b,255);
       } else if (li->name != 0)
         VideoIO::draw_text(screen,font->font,li->name,
-                           x,y+loopsize-xpand_liney,
+                           draw_x,draw_y+draw_loopsize-xpand_liney,
                            white);
     }
   }
@@ -244,11 +264,14 @@ void LoopTray::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
 };
 
 // Draw browser display
-void Browser::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
+void Browser::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y,
+                        const FweelinRenderMetrics &metrics) {
   const static SDL_Color white = { 0xEF, 0xAF, 0xFF, 0 };
   const static SDL_Color cursorclr = { 0x77, 0x77, 0x77, 0 };
   const static unsigned int tmp_size = 256;
   static char tmp[tmp_size];
+  int draw_x = metrics.ScaleX(x);
+  int draw_y = metrics.ScaleY(y);
 
   if (font != 0 && font->font != 0 && i != 0) {
     switch (i->GetType()) {
@@ -258,7 +281,7 @@ void Browser::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
 
         // Current patch
         snprintf(tmp,tmp_size,"%02d: %s",p->id,p->name);
-        VideoIO::draw_text(screen,font->font,tmp,x,y,white);
+        VideoIO::draw_text(screen,font->font,tmp,draw_x,draw_y,white);
       }
       break;
 
@@ -277,23 +300,21 @@ void Browser::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
         if (i == cur && renamer != 0) {
           RenameUIVars *rui = renamer->UpdateUIVars();
 
-          strncat(tmp,renamer->GetCurName(),tmp_size-1);
-          tmp[tmp_size-1] = '\0';
+          fweelin_append_truncate(tmp, tmp_size, renamer->GetCurName());
 
           // Draw text with cursor
           int sx, sy;
-          VideoIO::draw_text(screen,font->font,tmp,x,y,white,0,0,
+          VideoIO::draw_text(screen,font->font,tmp,draw_x,draw_y,white,0,0,
                              &sx,&sy);
 
           if (rui->rename_cursor_toggle)
             boxRGBA(screen,
-                    x+sx,y,
-                    x+sx+sy/2,y+sy,
+                    draw_x+sx,draw_y,
+                    draw_x+sx+sy/2,draw_y+sy,
                     cursorclr.r,cursorclr.g,cursorclr.b,255);
         } else if (i->name != 0) {
-          strncat(tmp,i->name,tmp_size-1);
-          tmp[tmp_size-1] = '\0';
-          VideoIO::draw_text(screen,font->font,tmp,x,y,white);
+          fweelin_append_truncate(tmp, tmp_size, i->name);
+          VideoIO::draw_text(screen,font->font,tmp,draw_x,draw_y,white);
         }
       }
       break;
@@ -302,55 +323,60 @@ void Browser::Draw_Item(SDL_Surface *screen, BrowserItem *i, int x, int y) {
 };
 
 // Draw browser display
-void Browser::Draw(SDL_Surface *screen) {
+void Browser::Draw(SDL_Surface *screen,
+                   const FweelinRenderMetrics &metrics) {
   LockBrowser();
 
   if (xpanded) {
+    int draw_xpand_x1 = metrics.ScaleX(xpand_x1);
+    int draw_xpand_y1 = metrics.ScaleY(xpand_y1);
+    int draw_xpand_x2 = metrics.ScaleX(xpand_x2);
+    int draw_xpand_y2 = metrics.ScaleY(xpand_y2);
+
     // Draw expanded view
 
     // Dim the background
-    for (int i = xpand_y1; i <= xpand_y2; i++)
-      hlineRGBA(screen,xpand_x1,xpand_x2,i,0,0,0,200);
-    hlineRGBA(screen,xpand_x1,xpand_x2,xpand_y1,127,127,127,255);
-    hlineRGBA(screen,xpand_x1,xpand_x2,xpand_y2,127,127,127,255);
-    vlineRGBA(screen,xpand_x1,xpand_y1,xpand_y2,127,127,127,255);
-    vlineRGBA(screen,xpand_x2,xpand_y1,xpand_y2,127,127,127,255);
+    for (int i = draw_xpand_y1; i <= draw_xpand_y2; i++)
+      hlineRGBA(screen,draw_xpand_x1,draw_xpand_x2,i,0,0,0,200);
+    hlineRGBA(screen,draw_xpand_x1,draw_xpand_x2,draw_xpand_y1,127,127,127,255);
+    hlineRGBA(screen,draw_xpand_x1,draw_xpand_x2,draw_xpand_y2,127,127,127,255);
+    vlineRGBA(screen,draw_xpand_x1,draw_xpand_y1,draw_xpand_y2,127,127,127,255);
+    vlineRGBA(screen,draw_xpand_x2,draw_xpand_y1,draw_xpand_y2,127,127,127,255);
 
     if (cur != 0) {
       BrowserItem *sp_1 = cur,
         *sp_2 = cur;
 
       // Compute text height and center of expanded window-- once!
-      if (xpand_liney == -1) {
+      int liney = xpand_liney;
+      if (liney == -1) {
         TTF_SizeText(font->font,VERSION,0,&xpand_liney);
-        xpand_centery = (xpand_y1+xpand_y2)/2;
-        xpand_spread = MIN(xpand_centery-xpand_y1,
-                           xpand_y2-xpand_centery);
-        xpand_spread /= xpand_liney;
-
-        // printf("compute xpand_liney: %d xpand_centery: %d\n",
-        //    xpand_liney, xpand_centery);
+        liney = xpand_liney;
       }
+      int xpand_centery = (draw_xpand_y1 + draw_xpand_y2) / 2;
+      int xpand_spread = MIN(xpand_centery - draw_xpand_y1,
+                             draw_xpand_y2 - xpand_centery);
+      xpand_spread /= liney;
 
       int ofs_1 = 0;
       boxRGBA(screen,
-              xpand_x1,xpand_centery,
-              xpand_x2,xpand_centery+xpand_liney,
+              draw_xpand_x1,xpand_centery,
+              draw_xpand_x2,xpand_centery+liney,
               127,0,0,255);
       Draw_Item(screen,sp_1,xpand_x1,
-                xpand_centery-xpand_liney*ofs_1);
+                xpand_centery-liney*ofs_1,metrics);
       while (ofs_1 < xpand_spread && sp_1->prev != 0) {
         sp_1 = sp_1->prev;
         ofs_1++;
         Draw_Item(screen,sp_1,xpand_x1,
-                  xpand_centery-xpand_liney*ofs_1);
+                  xpand_centery-liney*ofs_1,metrics);
       }
       int ofs_2 = 0;
       while (ofs_2 < xpand_spread-1 && sp_2->next != 0) {
         sp_2 = sp_2->next;
         ofs_2++;
         Draw_Item(screen,sp_2,xpand_x1,
-                  xpand_centery+xpand_liney*ofs_2);
+                  xpand_centery+liney*ofs_2,metrics);
       }
     }
 
@@ -361,26 +387,32 @@ void Browser::Draw(SDL_Surface *screen) {
   }
 
   // Draw single-line view
-  Draw_Item(screen,cur,xpos,ypos);
+  Draw_Item(screen,cur,xpos,ypos,metrics);
 
   UnlockBrowser();
 }
 
-void FloDisplayParamSet::Draw(SDL_Surface *screen) {
+void FloDisplayParamSet::Draw(SDL_Surface *screen,
+                              const FweelinRenderMetrics &metrics) {
   const static SDL_Color titleclr = { 0x77, 0x88, 0x99, 0 };
   const static SDL_Color barclr = { 0xFF, 0x50, 0x20, 0 };
   const static SDL_Color borderclr = { 0xFF, 0x50, 0x20, 0 };
+  int draw_x = metrics.ScaleX(xpos);
+  int draw_y = metrics.ScaleY(ypos);
+  int draw_sx = metrics.ScaleX(sx);
+  int draw_sy = metrics.ScaleY(sy);
+  int draw_margin = metrics.ScaleX(margin);
 
   boxRGBA(screen,
-          xpos,ypos,xpos+sx,ypos+sy,
+          draw_x,draw_y,draw_x+draw_sx,draw_y+draw_sy,
           0,0,0,190);
-  vlineRGBA(screen,xpos,ypos,ypos+sy,
+  vlineRGBA(screen,draw_x,draw_y,draw_y+draw_sy,
             borderclr.r,borderclr.g,borderclr.b,255);
-  vlineRGBA(screen,xpos+sx,ypos,ypos+sy,
+  vlineRGBA(screen,draw_x+draw_sx,draw_y,draw_y+draw_sy,
             borderclr.r,borderclr.g,borderclr.b,255);
-  hlineRGBA(screen,xpos,xpos+sx,ypos,
+  hlineRGBA(screen,draw_x,draw_x+draw_sx,draw_y,
             borderclr.r,borderclr.g,borderclr.b,255);
-  hlineRGBA(screen,xpos,xpos+sx,ypos+sy,
+  hlineRGBA(screen,draw_x,draw_x+draw_sx,draw_y+draw_sy,
             borderclr.r,borderclr.g,borderclr.b,255);
 
   if (font == 0 || font->font == 0) {
@@ -394,25 +426,25 @@ void FloDisplayParamSet::Draw(SDL_Surface *screen) {
   // Draw title
   if (title != 0)
     VideoIO::draw_text(screen,font->font,
-                       title,xpos+sx-margin,ypos,titleclr,2,0);
+                       title,draw_x+draw_sx-draw_margin,draw_y,titleclr,2,0);
 
   if (curbank < numbanks) {
     ParamSetBank *b = &banks[curbank];
 
     if (b->name != 0)
       VideoIO::draw_text(screen,font->font,banks[curbank].name,
-          xpos+margin,ypos,titleclr,0,0);
+          draw_x+draw_margin,draw_y,titleclr,0,0);
 
     // Draw bars for all active parameters in this bank
-    int spacing = (sx - margin*2) / numactiveparams,
-        cury = ypos + sy - margin,
-        curbary = cury - textheight - margin;
+    int spacing = (draw_sx - draw_margin*2) / numactiveparams,
+        cury = draw_y + draw_sy - draw_margin,
+        curbary = cury - textheight - draw_margin;
 
-    int maxheight = sy - margin*3 - textheight*3;
+    int maxheight = draw_sy - draw_margin*3 - textheight*3;
     float barscale = maxheight / b->maxvalue;
     int thickness = spacing / 4;
 
-    int curx = xpos + thickness*2 + margin;
+    int curx = draw_x + thickness*2 + draw_margin;
 
     for (int i = b->firstparamidx;
         i < b->numparams && i < b->firstparamidx + numactiveparams; i++, curx += spacing) {
@@ -443,7 +475,8 @@ void FloDisplayParamSet::Draw(SDL_Surface *screen) {
 };
 
 // Draw text display
-void FloDisplayText::Draw(SDL_Surface *screen) {
+void FloDisplayText::Draw(SDL_Surface *screen,
+                          const FweelinRenderMetrics &metrics) {
   static char tmp[255];
   const static SDL_Color titleclr = { 0x77, 0x88, 0x99, 0 };
   const static SDL_Color valclr = { 0xDF, 0xEF, 0x20, 0 };
@@ -454,19 +487,22 @@ void FloDisplayText::Draw(SDL_Surface *screen) {
     // Draw title
     if (title != 0)
       VideoIO::draw_text(screen,font->font,
-                         title,xpos,ypos,titleclr,0,1,
+                         title,metrics.ScaleX(xpos),metrics.ScaleY(ypos),
+                         titleclr,0,1,
                          &xofs,&yofs);
 
     // Draw value
     UserVariable val = exp->Evaluate(0);
     val.Print(tmp,255);
     VideoIO::draw_text(screen,font->font,
-                       tmp,xpos+xofs,ypos,valclr,0,1);
+                       tmp,metrics.ScaleX(xpos)+xofs,metrics.ScaleY(ypos),
+                       valclr,0,1);
   }
 };
 
 // Draw switch display
-void FloDisplaySwitch::Draw(SDL_Surface *screen) {
+void FloDisplaySwitch::Draw(SDL_Surface *screen,
+                            const FweelinRenderMetrics &metrics) {
   const static SDL_Color title1clr = { 0xDF, 0xEF, 0x20, 0 };
   const static SDL_Color title0clr = { 0x11, 0x22, 0x33, 0 };
 
@@ -477,12 +513,14 @@ void FloDisplaySwitch::Draw(SDL_Surface *screen) {
 
     // Draw title
     VideoIO::draw_text(screen,font->font,
-                       title,xpos,ypos,(nonz ? title1clr : title0clr),0,1);
+                       title,metrics.ScaleX(xpos),metrics.ScaleY(ypos),
+                       (nonz ? title1clr : title0clr),0,1);
   }
 };
 
 // Draw circular switch display
-void FloDisplayCircleSwitch::Draw(SDL_Surface *screen) {
+void FloDisplayCircleSwitch::Draw(SDL_Surface *screen,
+                                  const FweelinRenderMetrics &metrics) {
   const static SDL_Color titleclr = { 0x77, 0x88, 0x99, 0 };
   SDL_Color c1clr = { 0xDF, 0x20, 0x20, 0 };
   SDL_Color c0clr = { 0x11, 0x22, 0x33, 0 };
@@ -502,19 +540,24 @@ void FloDisplayCircleSwitch::Draw(SDL_Surface *screen) {
   prevnonz = nonz;
 
   // Draw circle
+  int draw_x = metrics.ScaleX(xpos);
+  int draw_y = metrics.ScaleY(ypos);
+  int draw_rad1 = metrics.ScaleX(rad1);
+  int draw_rad0 = metrics.ScaleX(rad0);
   SDL_Color *c = (nonz && flashon ? &c1clr : &c0clr);
-  filledCircleRGBA(screen,xpos,ypos,(nonz && flashon ? rad1 : rad0),
+  filledCircleRGBA(screen,draw_x,draw_y,(nonz && flashon ? draw_rad1 : draw_rad0),
                    c->r, c->g, c->b, 255);
 
   if (font != 0 && font->font != 0 && title != 0) {
     // Draw title
     VideoIO::draw_text(screen,font->font,
-                       title,xpos+2*rad0,ypos,titleclr,0,1);
+                       title,draw_x+2*draw_rad0,draw_y,titleclr,0,1);
   }
 };
 
 // Draw text switch display
-void FloDisplayTextSwitch::Draw(SDL_Surface *screen) {
+void FloDisplayTextSwitch::Draw(SDL_Surface *screen,
+                                const FweelinRenderMetrics &metrics) {
   // No title displayed
   SDL_Color c1clr = { 0x77, 0x88, 0x99, 0 };
   SDL_Color c0clr = { 0x99, 0x88, 0x77, 0 };
@@ -527,21 +570,29 @@ void FloDisplayTextSwitch::Draw(SDL_Surface *screen) {
   char *dtxt = (nonz ? text1 : text0);
   if (dtxt != 0)
     VideoIO::draw_text(screen,font->font,dtxt,
-                       xpos,ypos,
+                       metrics.ScaleX(xpos),metrics.ScaleY(ypos),
                        (nonz ? c1clr : c0clr),0,1);
 };
 
 // Draw text display
-void FloDisplayBar::Draw(SDL_Surface *screen) {
+void FloDisplayBar::Draw(SDL_Surface *screen,
+                         const FweelinRenderMetrics &metrics) {
   const static SDL_Color titleclr = { 0x77, 0x88, 0x99, 0 };
   const static SDL_Color barclr = { 0xFF, 0x50, 0x20, 0 };
   const static float calwidth = 1.1;
+  int draw_x = metrics.ScaleX(xpos);
+  int draw_y = metrics.ScaleY(ypos);
+  int draw_thickness =
+    FweelinScaleExtent(thickness,
+                       orient == O_Horizontal ? metrics.scale_y : metrics.scale_x);
+  float draw_barscale =
+    barscale * (orient == O_Horizontal ? metrics.scale_x : metrics.scale_y);
 
   if (font != 0 && font->font != 0) {
     // Draw title
     if (title != 0)
       VideoIO::draw_text(screen,font->font,
-                         title,xpos,ypos,titleclr,
+                         title,draw_x,draw_y,titleclr,
                          (orient == O_Vertical ? 1 : 2),
                          (orient == O_Horizontal ? 1 : 0));
   }
@@ -554,7 +605,7 @@ void FloDisplayBar::Draw(SDL_Surface *screen) {
     // dB
 
     // Convert linear value to dB and then to fader level:
-    int lvl = (int) (AudioLevel::dB_to_fader(LIN2DB(fval), maxdb) * barscale);
+    int lvl = (int) (AudioLevel::dB_to_fader(LIN2DB(fval), maxdb) * draw_barscale);
 
     // Draw bar
     if (orient == O_Vertical) {
@@ -570,28 +621,28 @@ void FloDisplayBar::Draw(SDL_Surface *screen) {
         for (float i = mindb; i <= maxdb; i += dbstep, clr += clrstep) {
           // printf("%f > %f def\n",i,AudioLevel::dB_to_fader(i, maxdb));
 
-          int clvl = (int) (AudioLevel::dB_to_fader(i, maxdb) * barscale);
+          int clvl = (int) (AudioLevel::dB_to_fader(i, maxdb) * draw_barscale);
           hlineRGBA(screen,
-                    xpos-(int) (calwidth*thickness),
-                    xpos-thickness,
-                    ypos-clvl,
+                    draw_x-(int) (calwidth*draw_thickness),
+                    draw_x-draw_thickness,
+                    draw_y-clvl,
                     clr,clr,clr,255);
           hlineRGBA(screen,
-                    xpos+thickness,
-                    xpos+(int) (calwidth*thickness),
-                    ypos-clvl,
+                    draw_x+draw_thickness,
+                    draw_x+(int) (calwidth*draw_thickness),
+                    draw_y-clvl,
                     clr,clr,clr,255);
         }
       }
 
       // Bar
       boxRGBA(screen,
-              xpos-thickness,ypos,
-              xpos+thickness,ypos-lvl,
+              draw_x-draw_thickness,draw_y,
+              draw_x+draw_thickness,draw_y-lvl,
               barclr.r/2,barclr.g/2,barclr.b/2,255);
       boxRGBA(screen,
-              xpos-thickness/2,ypos,
-              xpos+thickness/2,ypos-lvl,
+              draw_x-draw_thickness/2,draw_y,
+              draw_x+draw_thickness/2,draw_y-lvl,
               barclr.r,barclr.g,barclr.b,255);
     } else {
       // Horizontal
@@ -604,28 +655,28 @@ void FloDisplayBar::Draw(SDL_Surface *screen) {
           clr = 0;
 
         for (float i = mindb; i <= maxdb; i += dbstep, clr += clrstep) {
-          int clvl = (int) (AudioLevel::dB_to_fader(i, maxdb) * barscale);
+          int clvl = (int) (AudioLevel::dB_to_fader(i, maxdb) * draw_barscale);
           vlineRGBA(screen,
-                    xpos+clvl,
-                    ypos-(int) (calwidth*thickness),
-                    ypos-thickness,
+                    draw_x+clvl,
+                    draw_y-(int) (calwidth*draw_thickness),
+                    draw_y-draw_thickness,
                     clr,clr,clr,255);
           vlineRGBA(screen,
-                    xpos+clvl,
-                    ypos+thickness,
-                    ypos+(int) (calwidth*thickness),
+                    draw_x+clvl,
+                    draw_y+draw_thickness,
+                    draw_y+(int) (calwidth*draw_thickness),
                     clr,clr,clr,255);
         }
       }
 
       // Bar
       boxRGBA(screen,
-              xpos,ypos-thickness,
-              xpos+lvl,ypos+thickness,
+              draw_x,draw_y-draw_thickness,
+              draw_x+lvl,draw_y+draw_thickness,
               barclr.r/2,barclr.g/2,barclr.b/2,255);
       boxRGBA(screen,
-              xpos,ypos-thickness/2,
-              xpos+lvl,ypos+thickness/2,
+              draw_x,draw_y-draw_thickness/2,
+              draw_x+lvl,draw_y+draw_thickness/2,
               barclr.r,barclr.g,barclr.b,255);
     }
   } else {
@@ -637,48 +688,56 @@ void FloDisplayBar::Draw(SDL_Surface *screen) {
 
       // Show calibration
       boxRGBA(screen,
-              xpos-thickness/2,ypos,
-              xpos+thickness/2,(int) (ypos-barscale),
+              draw_x-draw_thickness/2,draw_y,
+              draw_x+draw_thickness/2,(int) (draw_y-draw_barscale),
               barclr.r/2,barclr.g/2,barclr.b/2,255);
 
       // Bar
       boxRGBA(screen,
-              xpos-thickness,ypos,
-              xpos+thickness,(int) (ypos-fval*barscale),
+              draw_x-draw_thickness,draw_y,
+              draw_x+draw_thickness,(int) (draw_y-fval*draw_barscale),
               barclr.r/2,barclr.g/2,barclr.b/2,255);
       boxRGBA(screen,
-              xpos-thickness/2,ypos,
-              xpos+thickness/2,(int) (ypos-fval*barscale),
+              draw_x-draw_thickness/2,draw_y,
+              draw_x+draw_thickness/2,(int) (draw_y-fval*draw_barscale),
               barclr.r,barclr.g,barclr.b,255);
     } else {
       // Horizontal
 
       // Show calibration
       boxRGBA(screen,
-              xpos,ypos-thickness/2,
-              (int) (xpos+barscale),ypos+thickness/2,
+              draw_x,draw_y-draw_thickness/2,
+              (int) (draw_x+draw_barscale),draw_y+draw_thickness/2,
               barclr.r/2,barclr.g/2,barclr.b/2,255);
 
       // Bar
       boxRGBA(screen,
-              xpos,ypos-thickness,
-              (int) (xpos+fval*barscale),ypos+thickness,
+              draw_x,draw_y-draw_thickness,
+              (int) (draw_x+fval*draw_barscale),draw_y+draw_thickness,
               barclr.r/2,barclr.g/2,barclr.b/2,255);
       boxRGBA(screen,
-              xpos,ypos-thickness/2,
-              (int) (xpos+fval*barscale),ypos+thickness/2,
+              draw_x,draw_y-draw_thickness/2,
+              (int) (draw_x+fval*draw_barscale),draw_y+draw_thickness/2,
               barclr.r,barclr.g,barclr.b,255);
     }
   }
 };
 
 // Draw text display
-void FloDisplayBarSwitch::Draw(SDL_Surface *screen) {
+void FloDisplayBarSwitch::Draw(SDL_Surface *screen,
+                               const FweelinRenderMetrics &metrics) {
   const static SDL_Color titleclr = { 0x77, 0x88, 0x99, 0 },
     warnclr = { 0xFF, 0, 0, 0 };
   const static SDL_Color barclr[2] = { { 0xEF, 0xAF, 0xFF, 0 },
                                        { 0xCF, 0x4F, 0xFC, 0 } };
   const static float calwidth = 1.1;
+  int draw_x = metrics.ScaleX(xpos);
+  int draw_y = metrics.ScaleY(ypos);
+  int draw_thickness =
+    FweelinScaleExtent(thickness,
+                       orient == O_Horizontal ? metrics.scale_y : metrics.scale_x);
+  float draw_barscale =
+    barscale * (orient == O_Horizontal ? metrics.scale_x : metrics.scale_y);
 
   const SDL_Color *bc = (color == 2 ? &barclr[1] : &barclr[0]);
 
@@ -686,7 +745,7 @@ void FloDisplayBarSwitch::Draw(SDL_Surface *screen) {
     // Draw title
     if (title != 0)
       VideoIO::draw_text(screen,font->font,
-                         title,xpos,ypos,titleclr,
+                         title,draw_x,draw_y,titleclr,
                          (orient == O_Vertical ? 1 : 2),
                          (orient == O_Horizontal ? 1 : 0));
   }
@@ -704,7 +763,7 @@ void FloDisplayBarSwitch::Draw(SDL_Surface *screen) {
     // dB
 
     // Convert linear value to dB and then to fader level:
-    int lvl = (int) (AudioLevel::dB_to_fader(LIN2DB(fval), maxdb) * barscale);
+    int lvl = (int) (AudioLevel::dB_to_fader(LIN2DB(fval), maxdb) * draw_barscale);
 
     // Draw bar
     if (orient == O_Vertical) {
@@ -718,24 +777,24 @@ void FloDisplayBarSwitch::Draw(SDL_Surface *screen) {
           clr = 0;
 
         for (float i = mindb; i <= maxdb; i += dbstep, clr += clrstep) {
-          int clvl = (int) (AudioLevel::dB_to_fader(i, maxdb) * barscale);
+          int clvl = (int) (AudioLevel::dB_to_fader(i, maxdb) * draw_barscale);
           hlineRGBA(screen,
-                    xpos-(int) (calwidth*thickness/2),
-                    xpos-thickness/2,
-                    ypos-clvl,
+                    draw_x-(int) (calwidth*draw_thickness/2),
+                    draw_x-draw_thickness/2,
+                    draw_y-clvl,
                     clr,clr,clr,(sw ? 255 : 127));
           hlineRGBA(screen,
-                    xpos+thickness/2,
-                    xpos+(int) (calwidth*thickness/2),
-                    ypos-clvl,
+                    draw_x+draw_thickness/2,
+                    draw_x+(int) (calwidth*draw_thickness/2),
+                    draw_y-clvl,
                     clr,clr,clr,(sw ? 255 : 127));
         }
       }
 
       // Bar
       boxRGBA(screen,
-              xpos-thickness/2,ypos,
-              xpos+thickness/2,ypos-lvl,
+              draw_x-draw_thickness/2,draw_y,
+              draw_x+draw_thickness/2,draw_y-lvl,
               bc->r,bc->g,bc->b,(sw ? 255 : 127));
     } else {
       // Horizontal
@@ -748,24 +807,24 @@ void FloDisplayBarSwitch::Draw(SDL_Surface *screen) {
           clr = 0;
 
         for (float i = mindb; i <= maxdb; i += dbstep, clr += clrstep) {
-          int clvl = (int) (AudioLevel::dB_to_fader(i, maxdb) * barscale);
+          int clvl = (int) (AudioLevel::dB_to_fader(i, maxdb) * draw_barscale);
           vlineRGBA(screen,
-                    xpos+clvl,
-                    ypos-(int) (calwidth*thickness/2),
-                    ypos-thickness/2,
+                    draw_x+clvl,
+                    draw_y-(int) (calwidth*draw_thickness/2),
+                    draw_y-draw_thickness/2,
                     clr,clr,clr,(sw ? 255 : 127));
           vlineRGBA(screen,
-                    xpos+clvl,
-                    ypos+thickness/2,
-                    ypos+(int) (calwidth*thickness/2),
+                    draw_x+clvl,
+                    draw_y+draw_thickness/2,
+                    draw_y+(int) (calwidth*draw_thickness/2),
                     clr,clr,clr,(sw ? 255 : 127));
         }
       }
 
       // Bar
       boxRGBA(screen,
-              xpos,ypos-thickness/2,
-              xpos+lvl,ypos+thickness/2,
+              draw_x,draw_y-draw_thickness/2,
+              draw_x+lvl,draw_y+draw_thickness/2,
               bc->r,bc->g,bc->b,(sw ? 255 : 127));
     }
   } else {
@@ -777,30 +836,30 @@ void FloDisplayBarSwitch::Draw(SDL_Surface *screen) {
 
       // Bar
       boxRGBA(screen,
-              xpos-thickness/2,ypos,
-              xpos+thickness/2,(int) (ypos-fval*barscale),
+              draw_x-draw_thickness/2,draw_y,
+              draw_x+draw_thickness/2,(int) (draw_y-fval*draw_barscale),
               bc->r,bc->g,bc->b,(sw ? 255 : 127));
       // Calibrate
       if (calibrate)
         hlineRGBA(screen,
-                  xpos-thickness/2,
-                  xpos+thickness/2,
-                  (int) (ypos-cval*barscale),
+                  draw_x-draw_thickness/2,
+                  draw_x+draw_thickness/2,
+                  (int) (draw_y-cval*draw_barscale),
                   255,255,255,(sw ? 255 : 127));
     } else {
       // Horizontal
 
       // Bar
       boxRGBA(screen,
-              xpos,ypos-thickness/2,
-              (int) (xpos+fval*barscale),ypos+thickness/2,
+              draw_x,draw_y-draw_thickness/2,
+              (int) (draw_x+fval*draw_barscale),draw_y+draw_thickness/2,
               bc->r,bc->g,bc->b,(sw ? 255 : 127));
       // Calibrate
       if (calibrate)
         vlineRGBA(screen,
-                  (int) (xpos+cval*barscale),
-                  ypos-thickness/2,
-                  ypos+thickness/2,
+                  (int) (draw_x+cval*draw_barscale),
+                  draw_y-draw_thickness/2,
+                  draw_y+draw_thickness/2,
                   255,255,255,(sw ? 255 : 127));
     }
   }
@@ -808,56 +867,67 @@ void FloDisplayBarSwitch::Draw(SDL_Surface *screen) {
 
 // Draw this element to the given screen-
 // implementation given in videoio.cc
-void FloLayoutBox::Draw(SDL_Surface *screen, SDL_Color clr) {
+void FloLayoutBox::Draw(SDL_Surface *screen, SDL_Color clr,
+                        const FweelinRenderMetrics &metrics) {
+  int draw_left = metrics.ScaleX(left);
+  int draw_top = metrics.ScaleY(top);
+  int draw_right = metrics.ScaleX(right);
+  int draw_bottom = metrics.ScaleY(bottom);
   // Solid box
   boxRGBA(screen,
-          left,top,right,bottom,
+          draw_left,draw_top,draw_right,draw_bottom,
           clr.r,clr.g,clr.b,255);
   // Outline
   if (lineleft)
-    vlineRGBA(screen,left,top,bottom,0,0,0,255);
+    vlineRGBA(screen,draw_left,draw_top,draw_bottom,0,0,0,255);
   if (lineright)
-    vlineRGBA(screen,right,top,bottom,0,0,0,255);
+    vlineRGBA(screen,draw_right,draw_top,draw_bottom,0,0,0,255);
   if (linetop)
-    hlineRGBA(screen,left,right,top,0,0,0,255);
+    hlineRGBA(screen,draw_left,draw_right,draw_top,0,0,0,255);
   if (linebottom)
-    hlineRGBA(screen,left,right,bottom,0,0,0,255);
+    hlineRGBA(screen,draw_left,draw_right,draw_bottom,0,0,0,255);
 };
 
 // Draw snapshots display
-void FloDisplaySnapshots::Draw(SDL_Surface *screen) {
+void FloDisplaySnapshots::Draw(SDL_Surface *screen,
+                               const FweelinRenderMetrics &metrics) {
   const static SDL_Color titleclr = { 0x77, 0x88, 0x99, 0 };
   const static SDL_Color borderclr = { 0xFF, 0x50, 0x20, 0 };
   const static SDL_Color cursorclr = { 0xEF, 0x11, 0x11, 0 };
+  int draw_x = metrics.ScaleX(xpos);
+  int draw_y = metrics.ScaleY(ypos);
+  int draw_sx = metrics.ScaleX(sx);
+  int draw_sy = metrics.ScaleY(sy);
+  int draw_margin = metrics.ScaleX(margin);
 
   LockSnaps();
 
   if (numdisp == -1) {
     int height = TTF_FontHeight(font->font);
-    numdisp = sy/height;
+    numdisp = draw_sy/height;
   }
 
   boxRGBA(screen,
-          xpos,ypos,xpos+sx,ypos+sy,
+          draw_x,draw_y,draw_x+draw_sx,draw_y+draw_sy,
           0,0,0,190);
-  vlineRGBA(screen,xpos,ypos,ypos+sy,
+  vlineRGBA(screen,draw_x,draw_y,draw_y+draw_sy,
             borderclr.r,borderclr.g,borderclr.b,255);
-  vlineRGBA(screen,xpos+sx,ypos,ypos+sy,
+  vlineRGBA(screen,draw_x+draw_sx,draw_y,draw_y+draw_sy,
             borderclr.r,borderclr.g,borderclr.b,255);
-  hlineRGBA(screen,xpos,xpos+sx,ypos,
+  hlineRGBA(screen,draw_x,draw_x+draw_sx,draw_y,
             borderclr.r,borderclr.g,borderclr.b,255);
-  hlineRGBA(screen,xpos,xpos+sx,ypos+sy,
+  hlineRGBA(screen,draw_x,draw_x+draw_sx,draw_y+draw_sy,
             borderclr.r,borderclr.g,borderclr.b,255);
 
   if (font != 0 && font->font != 0) {
     // Draw title
     if (title != 0)
       VideoIO::draw_text(screen,font->font,
-                         title,xpos+sx/2,ypos,titleclr,1,2);
+                         title,draw_x+draw_sx/2,draw_y,titleclr,1,2);
   }
 
   // Draw items
-  int cury = ypos+margin;
+  int cury = draw_y+draw_margin;
   int height = TTF_FontHeight(font->font);
   for (int i = firstidx; i < firstidx + numdisp; i++, cury += height) {
     const static int SNAP_NAME_LEN = 512;
@@ -883,12 +953,12 @@ void FloDisplaySnapshots::Draw(SDL_Surface *screen) {
 
       int sx, sy;
       VideoIO::draw_text(screen,font->font,
-                         buf,xpos+margin,cury,titleclr,0,0,&sx,&sy);
+                         buf,draw_x+draw_margin,cury,titleclr,0,0,&sx,&sy);
 
       if (rui != 0 && rui->rename_cursor_toggle)
           boxRGBA(screen,
-                  xpos+margin+sx,cury,
-                  xpos+margin+sx+sy/2,cury+sy,
+                  draw_x+draw_margin+sx,cury,
+                  draw_x+draw_margin+sx+sy/2,cury+sy,
                   cursorclr.r,cursorclr.g,cursorclr.b,255);
     }
   }
