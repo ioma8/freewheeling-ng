@@ -111,6 +111,215 @@ extern void U_STACK_TRACE(void);
 static const char *global_progname;
 static int global_output = STDOUT_FILENO;
 
+static int stacktrace_format_command(char *dst, size_t dst_size,
+				     const char *format, ...)
+{
+  int written;
+  va_list args;
+
+  if ((dst == NULL) || (dst_size == 0) || (format == NULL))
+    return -1;
+
+  va_start(args, format);
+  written = vsnprintf(dst, dst_size, format, args);
+  va_end(args);
+
+  if ((written < 0) || ((size_t) written >= dst_size))
+    {
+      dst[dst_size - 1] = (char)0;
+      return -1;
+    }
+
+  return 0;
+}
+
+static int stacktrace_append_text(char *dst, size_t dst_size, size_t *pos,
+                                  const char *src)
+{
+  size_t i;
+
+  if ((dst == NULL) || (dst_size == 0) || (pos == NULL) || (src == NULL))
+    return -1;
+
+  for (i = 0; src[i] != '\0'; i++)
+    {
+      if (*pos + 1 >= dst_size)
+        {
+          dst[dst_size - 1] = '\0';
+          return -1;
+        }
+      dst[*pos] = src[i];
+      (*pos)++;
+    }
+
+  dst[*pos] = '\0';
+  return 0;
+}
+
+static int stacktrace_append_shell_quoted(char *dst, size_t dst_size,
+                                          size_t *pos, const char *src)
+{
+  static const char single_quote_escape[] = "'\"'\"'";
+
+  if ((dst == NULL) || (dst_size == 0) || (pos == NULL) || (src == NULL))
+    return -1;
+
+  if (stacktrace_append_text(dst, dst_size, pos, "'") != 0)
+    return -1;
+
+  while (*src != '\0')
+    {
+      if (*src == '\'')
+        {
+          if (stacktrace_append_text(dst, dst_size, pos,
+                                     single_quote_escape) != 0)
+            return -1;
+        }
+      else
+        {
+          char ch[2];
+          ch[0] = *src;
+          ch[1] = '\0';
+          if (stacktrace_append_text(dst, dst_size, pos, ch) != 0)
+            return -1;
+        }
+      src++;
+    }
+
+  return stacktrace_append_text(dst, dst_size, pos, "'");
+}
+
+static int stacktrace_shell_quote(char *dst, size_t dst_size, const char *src)
+{
+  size_t pos = 0;
+
+  if ((dst == NULL) || (dst_size == 0))
+    return -1;
+
+  dst[0] = '\0';
+  return stacktrace_append_shell_quoted(dst, dst_size, &pos, src);
+}
+
+int stacktrace_parse_nm_symbol_line(const char *line, unsigned long *addr,
+                                    char *type, char *name,
+                                    size_t name_size)
+{
+  int offset = 0;
+  size_t i = 0;
+
+  if ((line == NULL) || (addr == NULL) || (type == NULL) ||
+      (name == NULL) || (name_size == 0))
+    return 0;
+
+  name[0] = '\0';
+
+  if (sscanf(line, "%lx %c %n", addr, type, &offset) != 2)
+    return 0;
+
+  while ((line[offset] == ' ') || (line[offset] == '\t'))
+    offset++;
+
+  if ((line[offset] == '\0') || (line[offset] == '\n'))
+    return 0;
+
+  while ((line[offset] != '\0') && (line[offset] != '\n') &&
+         (line[offset] != ' ') && (line[offset] != '\t'))
+    {
+      if (i + 1 < name_size)
+        name[i++] = line[offset];
+      offset++;
+    }
+
+  name[i] = '\0';
+  return 1;
+}
+
+int stacktrace_copy_symbol_name(char *dst, size_t dst_size, const char *src)
+{
+  size_t i = 0;
+
+  if ((dst == NULL) || (dst_size == 0) || (src == NULL))
+    return -1;
+
+  while ((src[i] != '\0') && (i + 1 < dst_size))
+    {
+      dst[i] = src[i];
+      i++;
+    }
+
+  dst[i] = '\0';
+  return 0;
+}
+
+int stacktrace_format_symbol_entry(char *dst, size_t dst_size, int index,
+                                   unsigned long real_address,
+                                   const char *symbol_name,
+                                   unsigned long offset, char type)
+{
+  if ((symbol_name == NULL) || (symbol_name[0] == '\0'))
+    return stacktrace_format_command(dst, dst_size, "[%d] 0x%08lx ???\n",
+                                     index, real_address);
+
+  return stacktrace_format_command(dst, dst_size,
+                                   "[%d] 0x%08lx <%s + 0x%lx> %c\n",
+                                   index, real_address, symbol_name, offset,
+                                   type);
+}
+
+int stacktrace_build_nm_command(char *dst, size_t dst_size, int use_gnu_nm,
+                                const char *progname)
+{
+  const char *prefix;
+  size_t pos = 0;
+
+  if (progname == NULL)
+    return -1;
+
+  prefix = use_gnu_nm ? "nm -B " : "nm -B ";
+#if defined(PLATFORM_SOLARIS) || defined(PLATFORM_SCO) || defined(PLATFORM_HPUX)
+  if (!use_gnu_nm)
+    prefix = "nm -x -p ";
+#elif defined(PLATFORM_AIX) || defined(PLATFORM_IRIX) || defined(PLATFORM_OSF)
+  if (!use_gnu_nm)
+    prefix = "nm -x -B ";
+#endif
+
+  if (dst == NULL || dst_size == 0)
+    return -1;
+
+  dst[0] = '\0';
+  if (stacktrace_append_text(dst, dst_size, &pos, prefix) != 0)
+    return -1;
+  return stacktrace_append_shell_quoted(dst, dst_size, &pos, progname);
+}
+
+int stacktrace_build_debugger_command(char *dst, size_t dst_size,
+                                      const char *progname,
+                                      const char *gdb_command_file)
+{
+  size_t pos = 0;
+
+  if ((progname == NULL) || (gdb_command_file == NULL))
+    return -1;
+
+  if ((dst == NULL) || (dst_size == 0))
+    return -1;
+
+  dst[0] = '\0';
+  if (stacktrace_append_text(dst, dst_size, &pos, "gdb -q ") != 0)
+    return -1;
+  if (stacktrace_append_shell_quoted(dst, dst_size, &pos, progname) != 0)
+    return -1;
+  if (stacktrace_format_command(dst + pos, dst_size - pos,
+                                " %d 2>/dev/null <", (int) getpid()) != 0)
+    return -1;
+  pos += strlen(dst + pos);
+  if (stacktrace_append_shell_quoted(dst, dst_size, &pos, gdb_command_file) !=
+      0)
+    return -1;
+  return stacktrace_append_text(dst, dst_size, &pos, " >fweelin-stackdump");
+}
+
 
 #if defined(PLATFORM_UNIX)
 /*************************************************************************
@@ -322,7 +531,9 @@ static void GCC_DumpStack(void)
 
   /* First find out if we are using GNU or vendor nm */
   number = 0;
-  strcpy(buffer, "nm -V 2>/dev/null | grep GNU | wc -l");
+  if (stacktrace_format_command(buffer, sizeof(buffer),
+				"nm -V 2>/dev/null | grep GNU | wc -l") != 0)
+    return;
   fd = my_popen(buffer, &pid);
   if (SYS_ERROR != fd)
     {
@@ -334,17 +545,10 @@ static void GCC_DumpStack(void)
     }
   if (number == 0) /* vendor nm */
     {
-#   if defined(PLATFORM_SOLARIS) || defined(PLATFORM_SCO) || defined(PLATFORM_HPUX)
-      strcpy(buffer, "nm -x -p ");
-#   elif defined(PLATFORM_AIX) || defined(PLATFORM_IRIX) || defined(PLATFORM_OSF)
-      strcpy(buffer, "nm -x -B ");
-#   else
-      strcpy(buffer, "nm -B ");
-#   endif
     }
-  else /* GNU nm */
-    strcpy(buffer, "nm -B ");
-  strcat(buffer, global_progname);
+  if (stacktrace_build_nm_command(buffer, sizeof(buffer), number != 0,
+                                  global_progname) != 0)
+    return;
 
   lowestAddress = ULONG_MAX;
   highestAddress = 0;
@@ -355,7 +559,8 @@ static void GCC_DumpStack(void)
 	{
 	  if (buffer[0] == '\n')
 	    continue;
-	  if (3 == sscanf(buffer, "%lx %c %s", &addr, &type, name))
+	  if (stacktrace_parse_nm_symbol_line(buffer, &addr, &type, name,
+					      sizeof(name)))
 	    {
 	      if ((type == 't') || type == 'T')
 		{
@@ -371,8 +576,9 @@ static void GCC_DumpStack(void)
 			  (addr > syms[i].closestAddress))
 			{
 			  syms[i].closestAddress = addr;
-			  strncpy(syms[i].name, name, MAX_BUFFER_SIZE);
-			  syms[i].name[MAX_BUFFER_SIZE] = (char)0;
+			  stacktrace_copy_symbol_name(syms[i].name,
+						      sizeof(syms[i].name),
+						      name);
 			  syms[i].type = type;
 			}
 		    }
@@ -385,19 +591,15 @@ static void GCC_DumpStack(void)
 	{
 	  if ((syms[i].name[0] == (char)0) ||
 	      (syms[i].realAddress <= lowestAddress) ||
-	      (syms[i].realAddress >= highestAddress))
-	    {
-	      sprintf(buffer, "[%d] 0x%08lx ???\n", i, syms[i].realAddress);
-	    }
-	  else
-	    {
-	      sprintf(buffer, "[%d] 0x%08lx <%s + 0x%lx> %c\n",
-		      i,
-		      syms[i].realAddress,
-		      syms[i].name,
-		      syms[i].realAddress - syms[i].closestAddress,
-		      syms[i].type);
-	    }
+	      (syms[i].realAddress >= highestAddress) ||
+	      (stacktrace_format_symbol_entry(buffer, sizeof(buffer), i,
+					      syms[i].realAddress,
+					      syms[i].name,
+					      syms[i].realAddress - syms[i].closestAddress,
+					      syms[i].type) != 0))
+	    stacktrace_format_symbol_entry(buffer, sizeof(buffer), i,
+					   syms[i].realAddress, NULL, 0,
+					   syms[i].type);
 	  write(global_output, buffer, strlen(buffer));
 	}
     }
@@ -407,7 +609,7 @@ static void GCC_DumpStack(void)
 /*************************************************************************
  * DumpStack [private]
  */
-static int DumpStack(char *format, ...)
+static int DumpStack(const char *format, ...)
 {
   int gotSomething = FALSE;
   int fd;
@@ -417,14 +619,12 @@ static int DumpStack(char *format, ...)
   va_list args;
   char cmd[MAX_BUFFER_SIZE];
 
-  /*
-   * Please note that vsprintf() is not ASync safe (ie. cannot safely
-   * be used from a signal handler.) If this proves to be a problem
-   * then the cmd string can be built by more basic functions such as
-   * strcpy, strcat, and a homemade integer-to-ascii function.
-   */
   va_start(args, format);
-  vsprintf(cmd, format, args);
+  if (vsnprintf(cmd, sizeof(cmd), format, args) >= (int) sizeof(cmd))
+    {
+      va_end(args);
+      return FALSE;
+    }
   va_end(args);
   
   fd = my_popen(cmd, &pid);
@@ -490,6 +690,13 @@ static int DumpStack(char *format, ...)
 void StackTrace(char *gdb_command_file)
 {
 #if defined(PLATFORM_UNIX)
+  char quoted_progname[MAX_BUFFER_SIZE];
+
+  if ((global_progname == NULL) ||
+      (stacktrace_shell_quote(quoted_progname, sizeof(quoted_progname),
+                              global_progname) != 0))
+    return;
+
   /*
    * In general dbx seems to do a better job than gdb.
    *
@@ -511,7 +718,7 @@ void StackTrace(char *gdb_command_file)
 		"detach\n"
 		"quit\n"
 		"EOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 
 # elif defined(PLATFORM_FREEBSD)
@@ -528,7 +735,7 @@ void StackTrace(char *gdb_command_file)
 		"shell kill -CONT %d\n"
 		"quit\n"
 		"EOF\n",
-		global_progname, (int)getpid(), (int)getpid()))
+		quoted_progname, (int)getpid(), (int)getpid()))
     return;
 
 # elif defined(PLATFORM_HPUX)
@@ -549,7 +756,7 @@ void StackTrace(char *gdb_command_file)
 		"T 50\n"
 		"q\ny\n"
 		"EOF\n",
-		(int)getpid(), global_progname))
+		(int)getpid(), quoted_progname))
     return;
 
   if (DumpStack("gdb -q %s %d 2>/dev/null <<EOF\n"
@@ -558,7 +765,7 @@ void StackTrace(char *gdb_command_file)
 		"detach\n"
 		"quit\n"
 		"EOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 
 #  if defined(PLATFORM_HPUX) && defined(USE_BUILTIN)
@@ -605,7 +812,7 @@ void StackTrace(char *gdb_command_file)
 		"detach\n"
 		"quit\n"
 		"EOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 
 # elif defined(PLATFORM_OSF)
@@ -615,7 +822,7 @@ void StackTrace(char *gdb_command_file)
 		"detach\n"
 		"quit\n"
 		"EOF\n",
-		(int)getpid(), global_progname))
+		(int)getpid(), quoted_progname))
     return;
 
   if (DumpStack("gdb -q %s %d 2>/dev/null <<EOF\n"
@@ -624,7 +831,7 @@ void StackTrace(char *gdb_command_file)
 		"detach\n"
 		"quit\n"
 		"EOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 
 # elif defined(PLATFORM_SCO)
@@ -643,7 +850,7 @@ void StackTrace(char *gdb_command_file)
   if (DumpStack("dbx %s %d 2>/dev/null <<EOF\n"
 		"where\n"
 		"quit\nEOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 
   if (DumpStack("gdb -q %s %d 2>/dev/null <<EOF\n"
@@ -652,7 +859,7 @@ void StackTrace(char *gdb_command_file)
 		"detach\n"
 		"quit\n"
 		"EOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 
 # elif defined(PLATFORM_SOLARIS)
@@ -661,7 +868,7 @@ void StackTrace(char *gdb_command_file)
 		"where\n"
 		"detach\n"
 		"EOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 
   if (DumpStack("gdb -q %s %d 2>/dev/null <<EOF\n"
@@ -680,7 +887,7 @@ void StackTrace(char *gdb_command_file)
 		"detach\n"
 		"quit\n"
 		"EOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 
   if (DumpStack("/usr/proc/bin/pstack %d",
@@ -697,7 +904,7 @@ void StackTrace(char *gdb_command_file)
 		":R\n"     /* Detach */
 		"\\$q\n"   /* Quit */
 		"EOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 
 # else /* All other Unix platforms */
@@ -712,14 +919,18 @@ void StackTrace(char *gdb_command_file)
 		"where\n"
 		"detach\n"
 		"EOF\n",
-		global_progname, (int)getpid()))
+		quoted_progname, (int)getpid()))
     return;
 #  endif
 
   // This version works (piping from a file)
-  if (DumpStack("gdb -q %s %d 2>/dev/null <%s >fweelin-stackdump",
-		global_progname, (int)getpid(), gdb_command_file))
-    return;
+  {
+    char cmd[MAX_BUFFER_SIZE];
+    if ((stacktrace_build_debugger_command(cmd, sizeof(cmd), global_progname,
+                                           gdb_command_file) == 0) &&
+        DumpStack("%s", cmd))
+      return;
+  }
 
 #if 0
   // This version does not work (piping from stdin)

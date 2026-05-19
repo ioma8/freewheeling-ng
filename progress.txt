@@ -1,0 +1,10 @@
+Iteration 1: Resolved a stack buffer overflow in browser label rendering by replacing unsafe fixed-length string appends with truncating helpers and adding a regression test for long names.
+Iteration 2: Hardened queued loop and scene filename handling by replacing unsafe fixed-size event buffer copies with truncating helpers and adding a regression test for exact-length, overlong, and null filenames.
+Iteration 3: Eliminated stacktrace command buffer overflows by replacing unchecked stack command formatting and executable-path concatenation with bounded builders and adding a regression test for overlong debugger and nm commands.
+Iteration 4: Hardened config library path expansion by replacing unchecked HOME-based string assembly with bounded expansion, handling missing HOME explicitly, and adding a regression test for truncation and tilde expansion.
+Iteration 5: Eliminated an nm symbol parsing overflow in stacktrace generation by replacing unbounded sscanf symbol reads with a bounded parser helper and adding a regression test for overlong symbol names.
+Iteration 6: Eliminated an off-by-one stacktrace symbol-name write by replacing the inline bounded copy with a dedicated truncating helper and adding a guard-byte regression test.
+Iteration 7: Eliminated silent save/load/rename path truncation by replacing fixed-size saveable path assembly with exact-sized builders and adding a regression test for oversized library paths and object names.
+Iteration 8: Eliminated a stacktrace output buffer overflow by replacing unsafe fixed-size stack line formatting with a bounded helper and adding a regression test for overlong symbol names.
+Iteration 9: Eliminated stacktrace shell command injection by shell-quoting executable and debugger command-file paths in crash helper commands and adding a regression test for metacharacter-bearing paths.
+Iteration 10: Eliminated silent config parser token truncation by replacing fixed 255-byte parsing buffers with exact-length token helpers across arrays, key lists, expressions, and ranges, and adding a regression test for overlong tokens.

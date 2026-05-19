@@ -45,6 +45,7 @@
 #include "fweelin_fluidsynth.h"
 #include "fweelin_paramset.h"
 #include "fweelin_looplibrary.h"
+#include "fweelin_string_utils.h"
 
 const float Loop::MIN_VOL = 0.01;
 PreallocatedType *Loop::loop_pretype = 0;
@@ -535,8 +536,10 @@ void TriggerMap::Save(Fweelin *app, char *filename) {
     // Now, we have to wait until all that saving is done.
     // Queue a scene marker event in the save queue
     SceneMarkerEvent *sEvt = (SceneMarkerEvent *) Event::GetEventByType(T_EV_SceneMarker,1);
-    if (filename != 0)
-      strncpy(sEvt->s_filename,filename,FWEELIN_OUTNAME_LEN);
+    if (filename != 0 &&
+        fweelin_copy_filename_truncate(sEvt->s_filename,
+                                       sizeof(sEvt->s_filename), filename))
+      printf("DISK: Scene filename truncated while queuing save event.\n");
     
     app->getLOOPMGR()->AddToSaveQueue(sEvt);
   }
@@ -582,21 +585,24 @@ void TriggerMap::GoSave(char *filename) {
       }
     
     // Done- compute our final hash
-    md5_digest(&md5gen,SAVEABLE_HASH_LENGTH,GetSaveHash());
+    md5_digest(&md5gen,GetSaveHash());
   }
   
   SetSaveStatus(SAVE_DONE);
     
   // Compose filenames & start writing
-  char tmp[FWEELIN_OUTNAME_LEN];
+  char *tmp = 0;
   if (newScene) {
     GET_SAVEABLE_HASH_TEXT(GetSaveHash());
-    snprintf(tmp,FWEELIN_OUTNAME_LEN,"%s/%s-%s%s",
-             app->getCFG()->GetLibraryPath(),FWEELIN_OUTPUT_SCENE_NAME,
-             hashtext,FWEELIN_OUTPUT_DATA_EXT);
+    tmp = fweelin_alloc_saveable_path(app->getCFG()->GetLibraryPath(),
+                                      FWEELIN_OUTPUT_SCENE_NAME, hashtext, 0,
+                                      FWEELIN_OUTPUT_DATA_EXT);
   } else
-    snprintf(tmp,FWEELIN_OUTNAME_LEN,"%s%s",
-             filename,FWEELIN_OUTPUT_DATA_EXT);
+    {
+      tmp = new char[strlen(filename) + strlen(FWEELIN_OUTPUT_DATA_EXT) + 1];
+      snprintf(tmp, strlen(filename) + strlen(FWEELIN_OUTPUT_DATA_EXT) + 1,
+               "%s%s", filename, FWEELIN_OUTPUT_DATA_EXT);
+    }
              
   if (!newScene) {
     // Back up existing scene data
@@ -714,6 +720,7 @@ void TriggerMap::GoSave(char *filename) {
       printf("DISK: Close output.\n");
     }
   }
+  delete[] tmp;
 };
 
 // If we are autosaving, we have to maintain a list of new loops to be saved

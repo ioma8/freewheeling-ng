@@ -2068,7 +2068,7 @@ class LoopListEvent : public Event {
   EVT_DEFINE(LoopListEvent,T_EV_LoopList);
   virtual void Recycle() {
     l = 0;
-    strcpy(l_filename,"");
+    l_filename[0] = '\0';
     l_idx = 0;
     l_vol = 1.0;
     Event::Recycle();
@@ -2086,7 +2086,7 @@ class SceneMarkerEvent : public Event {
  public:   
   EVT_DEFINE(SceneMarkerEvent,T_EV_SceneMarker);
   virtual void Recycle() {
-    strcpy(s_filename,"");
+    s_filename[0] = '\0';
     Event::Recycle();
   };
   

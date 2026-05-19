@@ -38,6 +38,8 @@
 #ifndef H_DEBUG_STACKTRACE
 #define H_DEBUG_STACKTRACE
 
+#include <stddef.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif // __cplusplus
@@ -45,6 +47,19 @@ extern "C" {
 void StackTrace(char *gdb_command_file);
 void StackTraceInit(const char *progname, int handle);
 int StackTraceFromSafeContext(const char *gdb_command_file);
+int stacktrace_build_nm_command(char *dst, size_t dst_size, int use_gnu_nm,
+                                const char *progname);
+int stacktrace_build_debugger_command(char *dst, size_t dst_size,
+                                      const char *progname,
+                                      const char *gdb_command_file);
+int stacktrace_parse_nm_symbol_line(const char *line, unsigned long *addr,
+                                    char *type, char *name,
+                                    size_t name_size);
+int stacktrace_copy_symbol_name(char *dst, size_t dst_size, const char *src);
+int stacktrace_format_symbol_entry(char *dst, size_t dst_size, int index,
+                                   unsigned long real_address,
+                                   const char *symbol_name,
+                                   unsigned long offset, char type);
 
 #if defined(__cplusplus)
 }

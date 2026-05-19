@@ -4,6 +4,7 @@
 
 #include "fweelin_core.h"
 #include "fweelin_looplibrary.h"
+#include "fweelin_string_utils.h"
 
 char Saveable::SplitFilename(const char *filename, int baselen, char *basename,
                              char *hash, char *objname,
@@ -64,31 +65,27 @@ void Saveable::RenameSaveable(char **filename_ptr, int baselen,
     printf("SAVEABLE: Can't rename '%s'- poorly formatted filename.\n",
            *filename_ptr);
   else {
-    char tmp[FWEELIN_OUTNAME_LEN];
-    strncpy(tmp, *filename_ptr, FWEELIN_OUTNAME_LEN);
-    tmp[FWEELIN_OUTNAME_LEN - 1] = '\0';
+    char *tmp = new char[strlen(*filename_ptr) + 1];
+    strcpy(tmp, *filename_ptr);
 
     delete[] * filename_ptr;
-    *filename_ptr = new char[strlen(fn_base) + 1 + strlen(fn_hash) + 1 +
-                             strlen(newname) + 1];
-    if (strlen(newname) > 0)
-      snprintf(*filename_ptr,
-               strlen(fn_base) + 1 + strlen(fn_hash) + 1 + strlen(newname) + 1,
-               "%s-%s-%s", fn_base, fn_hash, newname);
-    else
-      snprintf(*filename_ptr, strlen(fn_base) + 1 + strlen(fn_hash) + 1,
-               "%s-%s", fn_base, fn_hash);
+    *filename_ptr = fweelin_alloc_saveable_stub(fn_base, fn_hash, newname, 0);
 
-    unsigned int tmp_a_size = FWEELIN_OUTNAME_LEN + 10;
-    unsigned int tmp_b_size = FWEELIN_OUTNAME_LEN;
-    char tmp_a[tmp_a_size], tmp_b[tmp_b_size];
     for (int i = 0; i < num_exts; i++) {
-      snprintf(tmp_a, tmp_a_size, "%s%s", tmp, exts[i]);
-      snprintf(tmp_b, tmp_b_size, "%s%s", *filename_ptr, exts[i]);
+      char *tmp_a = new char[strlen(tmp) + strlen(exts[i]) + 1];
+      char *tmp_b = new char[strlen(*filename_ptr) + strlen(exts[i]) + 1];
+      snprintf(tmp_a, strlen(tmp) + strlen(exts[i]) + 1, "%s%s", tmp, exts[i]);
+      snprintf(tmp_b, strlen(*filename_ptr) + strlen(exts[i]) + 1, "%s%s",
+               *filename_ptr, exts[i]);
 
       if (!rename(tmp_a, tmp_b))
         printf("SAVEABLE: Rename file '%s' -> '%s'\n", tmp_a, tmp_b);
+
+      delete[] tmp_a;
+      delete[] tmp_b;
     }
+
+    delete[] tmp;
   }
 }
 
@@ -99,43 +96,27 @@ void Saveable::RenameSaveable(const char *librarypath, const char *basename,
                               char **new_filename) {
   if (savestatus == SAVE_DONE) {
     GET_SAVEABLE_HASH_TEXT(GetSaveHash());
-
-    *old_filename = new char[FWEELIN_OUTNAME_LEN];
-    *new_filename = new char[FWEELIN_OUTNAME_LEN];
+    *old_filename = 0;
+    *new_filename = 0;
 
     for (int i = 0; i < num_exts; i++) {
-      if (old_objname == 0 || strlen(old_objname) == 0)
-        snprintf(*old_filename, FWEELIN_OUTNAME_LEN, "%s/%s-%s%s", librarypath,
-                 basename, hashtext, exts[i]);
-      else
-        snprintf(*old_filename, FWEELIN_OUTNAME_LEN, "%s/%s-%s-%s%s",
-                 librarypath, basename, hashtext, old_objname, exts[i]);
+      char *old_with_ext = fweelin_alloc_saveable_path(
+          librarypath, basename, hashtext, old_objname, exts[i]);
+      char *new_with_ext = fweelin_alloc_saveable_path(
+          librarypath, basename, hashtext, nw_objname, exts[i]);
 
-      if (nw_objname == 0 || strlen(nw_objname) == 0)
-        snprintf(*new_filename, FWEELIN_OUTNAME_LEN, "%s/%s-%s%s", librarypath,
-                 basename, hashtext, exts[i]);
-      else
-        snprintf(*new_filename, FWEELIN_OUTNAME_LEN, "%s/%s-%s-%s%s",
-                 librarypath, basename, hashtext, nw_objname, exts[i]);
+      printf("SAVEABLE: Rename file '%s' -> '%s'\n", old_with_ext,
+             new_with_ext);
+      rename(old_with_ext, new_with_ext);
 
-      printf("SAVEABLE: Rename file '%s' -> '%s'\n", *old_filename,
-             *new_filename);
-      rename(*old_filename, *new_filename);
+      delete[] old_with_ext;
+      delete[] new_with_ext;
     }
 
-    if (old_objname == 0)
-      snprintf(*old_filename, FWEELIN_OUTNAME_LEN, "%s/%s-%s", librarypath,
-               basename, hashtext);
-    else
-      snprintf(*old_filename, FWEELIN_OUTNAME_LEN, "%s/%s-%s-%s", librarypath,
-               basename, hashtext, old_objname);
-
-    if (nw_objname == 0)
-      snprintf(*new_filename, FWEELIN_OUTNAME_LEN, "%s/%s-%s", librarypath,
-               basename, hashtext);
-    else
-      snprintf(*new_filename, FWEELIN_OUTNAME_LEN, "%s/%s-%s-%s", librarypath,
-               basename, hashtext, nw_objname);
+    *old_filename = fweelin_alloc_saveable_path(librarypath, basename, hashtext,
+                                                old_objname, 0);
+    *new_filename = fweelin_alloc_saveable_path(librarypath, basename, hashtext,
+                                                nw_objname, 0);
   }
 }
 
@@ -163,7 +144,9 @@ void LoopManager::AddLoopToLoadQueue(char *filename, int index, float vol) {
   numload++;
 
   LoopListEvent *ll = (LoopListEvent *) Event::GetEventByType(T_EV_LoopList, 1);
-  strcpy(ll->l_filename, filename);
+  if (fweelin_copy_filename_truncate(ll->l_filename, sizeof(ll->l_filename),
+                                     filename))
+    printf("DISK: Loop filename truncated while queuing load event.\n");
   ll->l_idx = index;
   ll->l_vol = vol;
 
@@ -386,25 +369,24 @@ void LoopManager::SetupSaveLoop(Loop *l, int /*l_idx*/, FILE **out,
         hashi->NextFragment();
     } while (go);
 
-    md5_digest(&md5gen, SAVEABLE_HASH_LENGTH, l->GetSaveHash());
+    md5_digest(&md5gen, l->GetSaveHash());
     l->SetSaveStatus(SAVE_DONE);
     delete hashi;
 
     double dhashtime = mygettime() - hashtime;
     printf("HASH TIME: %f ms\n", dhashtime * 1000);
 
-    char tmp[FWEELIN_OUTNAME_LEN];
     GET_SAVEABLE_HASH_TEXT(l->GetSaveHash());
+    char *tmp = 0;
     if (l->name == 0 || strlen(l->name) == 0)
-      snprintf(tmp, FWEELIN_OUTNAME_LEN, "%s/%s-%s%s",
-               app->getCFG()->GetLibraryPath(), FWEELIN_OUTPUT_LOOP_NAME,
-               hashtext,
-               app->getCFG()->GetAudioFileExt(app->getCFG()->GetLoopOutFormat()));
+      tmp = fweelin_alloc_saveable_path(
+          app->getCFG()->GetLibraryPath(), FWEELIN_OUTPUT_LOOP_NAME, hashtext,
+          0, app->getCFG()->GetAudioFileExt(app->getCFG()->GetLoopOutFormat()));
     else
-      snprintf(tmp, FWEELIN_OUTNAME_LEN, "%s/%s-%s-%s%s",
-               app->getCFG()->GetLibraryPath(), FWEELIN_OUTPUT_LOOP_NAME,
-               hashtext, l->name,
-               app->getCFG()->GetAudioFileExt(app->getCFG()->GetLoopOutFormat()));
+      tmp = fweelin_alloc_saveable_path(
+          app->getCFG()->GetLibraryPath(), FWEELIN_OUTPUT_LOOP_NAME, hashtext,
+          l->name,
+          app->getCFG()->GetAudioFileExt(app->getCFG()->GetLoopOutFormat()));
 
     struct stat st;
     printf("DISK: Opening '%s' for saving.\n", tmp);
@@ -418,6 +400,7 @@ void LoopManager::SetupSaveLoop(Loop *l, int /*l_idx*/, FILE **out,
         fclose(*out);
         *out = 0;
       }
+      delete[] tmp;
     } else {
       *out = fopen(tmp, "wb");
       if (*out == 0) {
@@ -429,6 +412,7 @@ void LoopManager::SetupSaveLoop(Loop *l, int /*l_idx*/, FILE **out,
           fclose(*out);
           *out = 0;
         }
+        delete[] tmp;
       } else {
         Browser *br = app->getBROWSER(B_Loop);
         if (br != 0) {
@@ -436,14 +420,15 @@ void LoopManager::SetupSaveLoop(Loop *l, int /*l_idx*/, FILE **out,
           br->AddDivisions(FWEELIN_FILE_BROWSER_DIVISION_TIME);
         }
 
+        delete[] tmp;
         if (l->name == 0 || strlen(l->name) == 0)
-          snprintf(tmp, FWEELIN_OUTNAME_LEN, "%s/%s-%s%s",
-                   app->getCFG()->GetLibraryPath(), FWEELIN_OUTPUT_LOOP_NAME,
-                   hashtext, FWEELIN_OUTPUT_DATA_EXT);
+          tmp = fweelin_alloc_saveable_path(app->getCFG()->GetLibraryPath(),
+                                            FWEELIN_OUTPUT_LOOP_NAME, hashtext,
+                                            0, FWEELIN_OUTPUT_DATA_EXT);
         else
-          snprintf(tmp, FWEELIN_OUTNAME_LEN, "%s/%s-%s-%s%s",
-                   app->getCFG()->GetLibraryPath(), FWEELIN_OUTPUT_LOOP_NAME,
-                   hashtext, l->name, FWEELIN_OUTPUT_DATA_EXT);
+          tmp = fweelin_alloc_saveable_path(app->getCFG()->GetLibraryPath(),
+                                            FWEELIN_OUTPUT_LOOP_NAME, hashtext,
+                                            l->name, FWEELIN_OUTPUT_DATA_EXT);
 
         xmlDocPtr ldat = xmlNewDoc((xmlChar *) "1.0");
         if (ldat != 0) {
@@ -470,6 +455,7 @@ void LoopManager::SetupSaveLoop(Loop *l, int /*l_idx*/, FILE **out,
           xmlSaveFormatFile(tmp, ldat, 1);
           xmlFreeDoc(ldat);
         }
+        delete[] tmp;
       }
     }
   } else {
@@ -777,8 +763,9 @@ void LoopManager::LoadLoop(char *filename, int index, float vol) {
 void LoopManager::LoadScene(SceneBrowserItem *i) {
   char *filename = i->filename;
 
-  char tmp[FWEELIN_OUTNAME_LEN], tmp2[FWEELIN_OUTNAME_LEN];
-  snprintf(tmp, FWEELIN_OUTNAME_LEN, "%s%s", filename, FWEELIN_OUTPUT_DATA_EXT);
+  char *tmp = new char[strlen(filename) + strlen(FWEELIN_OUTPUT_DATA_EXT) + 1];
+  snprintf(tmp, strlen(filename) + strlen(FWEELIN_OUTPUT_DATA_EXT) + 1, "%s%s",
+           filename, FWEELIN_OUTPUT_DATA_EXT);
 
   xmlDocPtr dat = xmlParseFile(tmp);
   if (dat == 0)
@@ -808,13 +795,14 @@ void LoopManager::LoadScene(SceneBrowserItem *i) {
           }
 
           if ((n = xmlGetProp(cur_node, (const xmlChar *) "hash")) != 0) {
-            snprintf(tmp2, FWEELIN_OUTNAME_LEN, "%s/%s-%s",
-                     app->getCFG()->GetLibraryPath(), FWEELIN_OUTPUT_LOOP_NAME,
-                     n);
+            char *tmp2 = fweelin_alloc_saveable_path(
+                app->getCFG()->GetLibraryPath(), FWEELIN_OUTPUT_LOOP_NAME,
+                (const char *) n, 0, 0);
             xmlFree(n);
 
             printf(" (loopid %d vol %.5f filename %s)\n", l_idx, vol, tmp2);
             LoadLoop(tmp2, l_idx, vol);
+            delete[] tmp2;
           } else
             printf("DISK: Scene definition for loop (id %d) has missing hash!\n",
                    l_idx);
@@ -916,4 +904,5 @@ void LoopManager::LoadScene(SceneBrowserItem *i) {
   }
 
   xmlFreeDoc(dat);
+  delete[] tmp;
 }
